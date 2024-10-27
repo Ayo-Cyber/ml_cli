@@ -6,12 +6,14 @@ import sys
 import os
 import logging
 import time
+import io 
 from ml_cli.utils.utils import (write_config,
     should_prompt_target_column,
     get_dependencies, 
     is_readable_file,
     is_target_in_file,
     get_target_directory)
+
 
 # Constants
 KEYBOARD_INTERRUPT_MESSAGE = "Operation cancelled by user."

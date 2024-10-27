@@ -7,6 +7,7 @@ import questionary
 import click
 import sys
 import logging
+import ssl
 
 # Constants for file extensions
 VALID_EXTENSIONS = ('.csv', '.txt', '.json')
@@ -84,19 +85,29 @@ def check_local_file_readability(data_path):
     return False
 
 
+# Ensure SSL verification is disabled globally if needed
+ssl._create_default_https_context = ssl._create_unverified_context
+
 def is_target_in_file(data_path, target_column, ssl_verify=True):
     """Check if the target column exists in the data file."""
     logging.info("Checking for target column in data.")
+    
     try:
         if data_path.startswith('http://') or data_path.startswith('https://'):
-            # Fetch data from URL with SSL verification setting
-            response = requests.get(data_path, verify=ssl_verify)
-            response.raise_for_status()  # Raises an error if the request failed
-            df = pd.read_csv(io.StringIO(response.text)) if data_path.endswith('.csv') else pd.read_json(io.StringIO(response.text))
+            # Fetch data from URL
+            df = pd.read_csv(data_path)  # Read directly as CSV
         else:
             # Load data locally
-            df = pd.read_csv(data_path) if data_path.endswith('.csv') else pd.read_json(data_path)
-        return target_column in df.columns
+            df = pd.read_csv(data_path)
+
+        # Check if target column exists
+        if target_column in df.columns:
+            logging.info(f"Target column '{target_column}' found in data.")
+            return True
+        else:
+            logging.warning(f"Target column '{target_column}' not found in data.")
+            return False
+    
     except Exception as e:
         logging.error(f"Error reading file {data_path}: {e}")
         return False
