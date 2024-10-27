@@ -43,8 +43,7 @@ for handler in logging.getLogger().handlers:
 
 @click.command()
 @click.option('--format', default='yaml', type=click.Choice(['yaml', 'json']), help='Format of the configuration file (yaml or json)')
-@click.option('--ssl-verify/--no-ssl-verify', default=True, help='Enable or disable SSL verification for URL data paths')
-def init(format, ssl_verify):
+def init(format):
     """Initialize a new configuration file (YAML or JSON)"""
     
     start_time = time.time()  # Start timing
@@ -58,8 +57,8 @@ def init(format, ssl_verify):
     # Log the data path input
     logging.info(f"Data path provided: {data_path}")
     
-    # Check if the file path is readable, passing the SSL verification flag
-    if not is_readable_file(data_path, ssl_verify=ssl_verify):
+    # Check if the file path is readable
+    if not is_readable_file(data_path):
         click.secho("Error: The file does not exist, is not readable, or has an unsupported format. Please provide a valid CSV, TXT, or JSON file.", fg='red')
         logging.error("Invalid data path provided.")
         sys.exit(1)
@@ -81,7 +80,7 @@ def init(format, ssl_verify):
 
     target_column = click.prompt('Please enter the target variable column', type=str) if should_prompt_target_column(task_type) else None
 
-    if target_column and not is_target_in_file(data_path, target_column, ssl_verify=ssl_verify):
+    if target_column and not is_target_in_file(data_path, target_column):
         click.secho(f"Error: The target column '{target_column}' is not present in the data file.", fg='red')
         logging.error(f"Target column '{target_column}' not found in the data file.")
         sys.exit(1)
@@ -109,3 +108,4 @@ def init(format, ssl_verify):
     elapsed_time = end_time - start_time
     click.secho(f"Configuration file created at : {config_filename}", fg="green")
     logging.info(f"Configuration file created! (Time taken: {elapsed_time:.2f}s)")
+

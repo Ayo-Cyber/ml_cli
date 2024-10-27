@@ -53,18 +53,18 @@ def get_dependencies(task_type):
     return dependencies
 
 
-def is_readable_file(data_path, ssl_verify=True):
+def is_readable_file(data_path):
     """Check if the provided path is a readable file (local or URL) and has a supported format."""
     if data_path.startswith('http://') or data_path.startswith('https://'):
-        return check_url_readability(data_path, ssl_verify)
+        return check_url_readability(data_path)
     else:
         return check_local_file_readability(data_path)
 
 
-def check_url_readability(data_path, ssl_verify=True):
+def check_url_readability(data_path):
     """Check if the URL is reachable and has a valid file extension."""
     try:
-        response = requests.head(data_path, verify=ssl_verify)
+        response = requests.head(data_path)
         if response.status_code == 200 and data_path.endswith(VALID_EXTENSIONS):
             logging.info(f"URL {data_path} is reachable.")
             return True
@@ -84,18 +84,11 @@ def check_local_file_readability(data_path):
     return False
 
 
-def is_target_in_file(data_path, target_column, ssl_verify=True):
+def is_target_in_file(data_path, target_column):
     """Check if the target column exists in the data file."""
     logging.info("Checking for target column in data.")
     try:
-        if data_path.startswith('http://') or data_path.startswith('https://'):
-            # Fetch data from URL with SSL verification setting
-            response = requests.get(data_path, verify=ssl_verify)
-            response.raise_for_status()  # Raises an error if the request failed
-            df = pd.read_csv(io.StringIO(response.text)) if data_path.endswith('.csv') else pd.read_json(io.StringIO(response.text))
-        else:
-            # Load data locally
-            df = pd.read_csv(data_path) if data_path.endswith('.csv') else pd.read_json(data_path)
+        df = pd.read_csv(data_path) if data_path.endswith('.csv') else pd.read_json(data_path)
         return target_column in df.columns
     except Exception as e:
         logging.error(f"Error reading file {data_path}: {e}")
@@ -151,40 +144,40 @@ def validate_existing_directory(target_directory):
         sys.exit(1)
 
 
-# def perform_classification(df, target_column):
-#     """Run a classification task using PyCaret."""
-#     logging.info("Starting classification task with PyCaret")
+def perform_classification(df, target_column):
+    """Run a classification task using PyCaret."""
+    logging.info("Starting classification task with PyCaret")
     
-#     # Set up PyCaret for classification
-#     py_clf.setup(data=df, target=target_column, silent=True, html=False)
+    # Set up PyCaret for classification
+    py_clf.setup(data=df, target=target_column, silent=True, html=False)
     
-#     # Compare and select the best model
-#     best_model = py_clf.compare_models()
-#     logging.info(f"Best Classification Model: {best_model}")
-#     click.secho(f"Best classification model: {best_model}", fg='blue')
+    # Compare and select the best model
+    best_model = py_clf.compare_models()
+    logging.info(f"Best Classification Model: {best_model}")
+    click.secho(f"Best classification model: {best_model}", fg='blue')
 
 
-# def perform_regression(df, target_column):
-#     """Run a regression task using PyCaret."""
-#     logging.info("Starting regression task with PyCaret")
+def perform_regression(df, target_column):
+    """Run a regression task using PyCaret."""
+    logging.info("Starting regression task with PyCaret")
     
-#     # Set up PyCaret for regression
-#     py_reg.setup(data=df, target=target_column, silent=True, html=False)
+    # Set up PyCaret for regression
+    py_reg.setup(data=df, target=target_column, silent=True, html=False)
     
-#     # Compare and select the best model
-#     best_model = py_reg.compare_models()
-#     logging.info(f"Best Regression Model: {best_model}")
-#     click.secho(f"Best regression model: {best_model}", fg='blue')
+    # Compare and select the best model
+    best_model = py_reg.compare_models()
+    logging.info(f"Best Regression Model: {best_model}")
+    click.secho(f"Best regression model: {best_model}", fg='blue')
 
 
-# def perform_clustering(df):
-#     """Run a clustering task using PyCaret."""
-#     logging.info("Starting clustering task with PyCaret")
+def perform_clustering(df):
+    """Run a clustering task using PyCaret."""
+    logging.info("Starting clustering task with PyCaret")
     
-#     # Set up PyCaret for clustering
-#     py_clust.setup(data=df, silent=True, html=False)
+    # Set up PyCaret for clustering
+    py_clust.setup(data=df, silent=True, html=False)
     
-#     # Create and evaluate clustering models
-#     best_model = py_clust.create_model('kmeans')
-#     logging.info(f"Best Clustering Model: {best_model}")
-#     click.secho(f"Best clustering model: {best_model}", fg='blue')
+    # Create and evaluate clustering models
+    best_model = py_clust.create_model('kmeans')
+    logging.info(f"Best Clustering Model: {best_model}")
+    click.secho(f"Best clustering model: {best_model}", fg='blue')
