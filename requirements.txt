@@ -9,3 +9,4 @@ rich
 configparser
 python-dotenv
 requests
+pycaret

@@ -8,7 +8,7 @@ Author-email: atunraseayomide@gmail.com
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
-Requires-Python: >=3.6
+Requires-Python: >=3.9
 Description-Content-Type: text/markdown
 Requires-Dist: pandas
 Requires-Dist: numpy
@@ -21,6 +21,7 @@ Requires-Dist: rich
 Requires-Dist: configparser
 Requires-Dist: python-dotenv
 Requires-Dist: requests
+Requires-Dist: pycaret
 
 # ml_cli
 Build a Comman Line Interface for Machine Learning

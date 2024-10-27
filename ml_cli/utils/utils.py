@@ -142,3 +142,42 @@ def validate_existing_directory(target_directory):
         logging.error(f"The specified directory does not exist: {target_directory}")
         click.secho("Error: The specified directory does not exist.", fg='red')
         sys.exit(1)
+
+
+def perform_classification(df, target_column):
+    """Run a classification task using PyCaret."""
+    logging.info("Starting classification task with PyCaret")
+    
+    # Set up PyCaret for classification
+    py_clf.setup(data=df, target=target_column, silent=True, html=False)
+    
+    # Compare and select the best model
+    best_model = py_clf.compare_models()
+    logging.info(f"Best Classification Model: {best_model}")
+    click.secho(f"Best classification model: {best_model}", fg='blue')
+
+
+def perform_regression(df, target_column):
+    """Run a regression task using PyCaret."""
+    logging.info("Starting regression task with PyCaret")
+    
+    # Set up PyCaret for regression
+    py_reg.setup(data=df, target=target_column, silent=True, html=False)
+    
+    # Compare and select the best model
+    best_model = py_reg.compare_models()
+    logging.info(f"Best Regression Model: {best_model}")
+    click.secho(f"Best regression model: {best_model}", fg='blue')
+
+
+def perform_clustering(df):
+    """Run a clustering task using PyCaret."""
+    logging.info("Starting clustering task with PyCaret")
+    
+    # Set up PyCaret for clustering
+    py_clust.setup(data=df, silent=True, html=False)
+    
+    # Create and evaluate clustering models
+    best_model = py_clust.create_model('kmeans')
+    logging.info(f"Best Clustering Model: {best_model}")
+    click.secho(f"Best clustering model: {best_model}", fg='blue')
