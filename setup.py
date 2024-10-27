@@ -1,30 +1,27 @@
 from setuptools import setup, find_packages
 
+# Read requirements.txt
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
+
 setup(
-    name='ml_cli',  # Replace with your package name
-    version='0.1',            # Version number
-    packages=find_packages(),  # Automatically find and include all packages in the directory
-    install_requires=[
-        'pandas',
-        'numpy',
-        'scikit-learn',
-        'click',
-        'pyyaml'
-    ],
+    name='ml_cli',
+    version='0.1',
+    packages=find_packages(),
+    install_requires=required,  # Directly reads dependencies from requirements.txt
     entry_points={
         'console_scripts': 'ml=ml_cli.cli:cli'
-
     },
-    author='Atunrase Ayomide',          # name
-    author_email='atunraseayomide@gmail.com',  # email
-    description='A brief description of your project',  # Short description of your project
-    long_description=open('README.md').read(),  # Optional: Read the long description from a README file
-    long_description_content_type='text/markdown',  # Specify the format of the long description (e.g., text/markdown)
-    url='https://github.com/Ayo-Cyber/ml_cli.git',  # URL to your project (e.g., GitHub repo)
+    author='Atunrase Ayomide',
+    author_email='atunraseayomide@gmail.com',
+    description='A brief description of your project',
+    long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
+    url='https://github.com/Ayo-Cyber/ml_cli.git',
     classifiers=[
         'Programming Language :: Python :: 3',
-        'License :: OSI Approved :: MIT License',  # Specify your license
+        'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    python_requires='>=3.6',  # Specify the minimum Python version
+    python_requires='>=3.6',
 )

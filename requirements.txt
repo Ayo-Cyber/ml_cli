@@ -3,3 +3,9 @@ numpy
 scikit-learn
 click
 pyyaml
+questionary
+tqdm
+rich
+configparser
+python-dotenv
+requests

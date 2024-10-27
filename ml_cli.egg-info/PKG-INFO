@@ -15,6 +15,12 @@ Requires-Dist: numpy
 Requires-Dist: scikit-learn
 Requires-Dist: click
 Requires-Dist: pyyaml
+Requires-Dist: questionary
+Requires-Dist: tqdm
+Requires-Dist: rich
+Requires-Dist: configparser
+Requires-Dist: python-dotenv
+Requires-Dist: requests
 
 # ml_cli
 Build a Comman Line Interface for Machine Learning
