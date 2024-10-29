@@ -12,3 +12,5 @@ numpy
 scikit-learn
 torch
 tpot
+matplotlib
+seaborn

@@ -24,6 +24,8 @@ Requires-Dist: numpy
 Requires-Dist: scikit-learn
 Requires-Dist: torch
 Requires-Dist: tpot
+Requires-Dist: matplotlib
+Requires-Dist: seaborn
 
 # ml_cli
 Build a Comman Line Interface for Machine Learning

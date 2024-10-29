@@ -1,0 +1,12 @@
+data:
+  data_path: https://raw.githubusercontent.com/kb22/Heart-Disease-Prediction/refs/heads/master/dataset.csv
+  target_column: target
+dependencies:
+- pandas
+- numpy
+- scikit-learn
+- click
+- pyyaml
+- matplotlib
+task:
+  type: classification

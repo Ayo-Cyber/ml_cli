@@ -9,6 +9,7 @@ ml_cli.egg-info/entry_points.txt
 ml_cli.egg-info/requires.txt
 ml_cli.egg-info/top_level.txt
 ml_cli/commands/__init__.py
+ml_cli/commands/eda.py
 ml_cli/commands/init.py
 ml_cli/commands/run.py
 ml_cli/utils/__init__.py
