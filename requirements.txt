@@ -1,6 +1,4 @@
 pandas
-numpy
-scikit-learn
 click
 pyyaml
 questionary
@@ -10,3 +8,7 @@ configparser
 python-dotenv
 requests
 pycaret
+numpy
+scikit-learn
+torch
+tpot

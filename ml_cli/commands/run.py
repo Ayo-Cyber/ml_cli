@@ -1,58 +1,68 @@
-# import click
-# import yaml
-# import time
-# import pandas as pd
-# import pycaret.classification as py_clf
-# import pycaret.regression as py_reg
-# import pycaret.clustering as py_clust
-# import logging
+import os
+import logging
+import sys
+import click
+import yaml
+from tpot import TPOTClassifier, TPOTRegressor
+from sklearn.model_selection import train_test_split
+import pandas as pd
 
-# @click.command()
-# @click.option('--config', default='config.yaml', help='Path to the configuration file.')
-# def run(config):
-#     """Run a machine learning task using PyCaret based on the provided configuration file."""
-#     start_time = time.time()
+@click.command()
+def run():
+    """Run the ML pipeline based on the configuration."""
     
-#     # Load Configuration
-#     logging.info(f"Loading configuration from {config}")
-#     try:
-#         with open(config, 'r') as f:
-#             config_data = yaml.safe_load(f)
-#     except (IOError, yaml.YAMLError) as e:
-#         click.secho("Error reading configuration file.", fg='red')
-#         logging.error(f"Failed to load configuration: {e}")
-#         return
+    # Load the configuration file
+    config_path = os.path.join(os.getcwd(), 'config.yaml')  # Adjust as necessary
+    if not os.path.exists(config_path):
+        click.secho("Error: Configuration file 'config.yaml' not found in the current directory.", fg='red')
+        logging.error("Configuration file not found.")
+        sys.exit(1)
 
-#     # Extract configuration details
-#     data_path = config_data['data'].get('data_path')
-#     task_type = config_data['task'].get('type')
-#     target_column = config_data['data'].get('target_column')
+    with open(config_path, 'r') as file:
+        config = yaml.safe_load(file)
 
-#     # Validate essential configuration fields
-#     if not data_path or not task_type or not target_column:
-#         click.secho("Missing essential configuration fields (data_path, task_type, target_column).", fg='red')
-#         return
+    # Extract parameters from the config
+    data_path = config['data']['data_path']
+    target_column = config['data']['target_column']
+    task_type = config['task']['type']
+    
+    # Load the dataset
+    try:
+        data = pd.read_csv(data_path)
+        logging.info("Data loaded successfully.")
+    except Exception as e:
+        click.secho(f"Error loading data: {e}", fg='red')
+        logging.error(f"Error loading data: {e}")
+        sys.exit(1)
 
-#     # Load Dataset
-#     try:
-#         df = pd.read_csv(data_path)
-#     except Exception as e:
-#         logging.error(f"Failed to load data: {e}")
-#         click.secho("Error loading data file.", fg='red')
-#         return
+    # Split the data
+    X = data.drop(columns=[target_column])
+    y = data[target_column]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-#     # Execute the Task Based on Type
-#     if task_type == 'classification':
-#         perform_classification(df, target_column)
-#     elif task_type == 'regression':
-#         perform_regression(df, target_column)
-#     elif task_type == 'clustering':
-#         perform_clustering(df)
-#     else:
-#         click.secho("Unsupported task type specified in the configuration.", fg='red')
-#         return
+    if task_type == "classification":
+        model = TPOTClassifier(generations=4, verbosity=2, random_state=42, n_jobs=-1)
+    elif task_type == "regression":
+        model = TPOTRegressor(generations=4, verbosity=2, random_state=42, n_jobs=-1)
+    else:
+        click.secho("Error: Unsupported task type.", fg='red')
+        logging.error("Unsupported task type.")
+        sys.exit(1)
 
-#     # Completion
-#     elapsed_time = time.time() - start_time
-#     click.secho(f"Task completed successfully in {elapsed_time:.2f} seconds.", fg='green')
-#     logging.info(f"Task completed in {elapsed_time:.2f}s")
+
+    logging.info("Starting TPOT optimization...")
+    model.fit(X_train, y_train)
+
+    # Save the optimized pipeline
+    output_dir = os.path.dirname(config_path)  # Get the directory from config
+    model_file_path = os.path.join(output_dir, 'best_model_pipeline.py')
+    model.export(model_file_path)
+    logging.info(f"Model pipeline exported to {model_file_path}")
+
+    # Log performance metrics
+    score = model.score(X_test, y_test)
+    click.secho(f"Model performance score: {score}", fg='green')
+
+    click.secho("TPOT optimization completed.", fg='green')
+
+

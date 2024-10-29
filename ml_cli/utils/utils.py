@@ -8,6 +8,9 @@ import click
 import sys
 import logging
 import ssl
+import h2o
+from h2o.sklearn import H2OAutoMLClassifier, H2OAutoMLRegressor
+
 
 # Constants for file extensions
 VALID_EXTENSIONS = ('.csv', '.txt', '.json')
@@ -142,14 +145,14 @@ def handle_directory_choice(directory_choice):
     elif directory_choice == "another":
         target_directory = click.prompt('Please enter the target directory path', type=str)
         validate_existing_directory(target_directory)
-        os.chdir(target_directory)
+        os.chdir(target_directory)  # Change to the selected directory
         return target_directory
 
     else:  # Create a new directory
         new_directory_name = click.prompt('Please enter the new directory name', type=str)
         target_directory = os.path.join(os.getcwd(), new_directory_name)
         os.makedirs(target_directory, exist_ok=True)
-        os.chdir(target_directory)
+        os.chdir(target_directory)  # Change to the new directory
         logging.info(f"Created and changed to new directory: {target_directory}")
         return target_directory
 
@@ -162,40 +165,48 @@ def validate_existing_directory(target_directory):
         sys.exit(1)
 
 
-# def perform_classification(df, target_column):
-#     """Run a classification task using PyCaret."""
-#     logging.info("Starting classification task with PyCaret")
-    
-#     # Set up PyCaret for classification
-#     py_clf.setup(data=df, target=target_column, silent=True, html=False)
-    
-#     # Compare and select the best model
-#     best_model = py_clf.compare_models()
-#     logging.info(f"Best Classification Model: {best_model}")
-#     click.secho(f"Best classification model: {best_model}", fg='blue')
 
 
-# def perform_regression(df, target_column):
-#     """Run a regression task using PyCaret."""
-#     logging.info("Starting regression task with PyCaret")
-    
-#     # Set up PyCaret for regression
-#     py_reg.setup(data=df, target=target_column, silent=True, html=False)
-    
-#     # Compare and select the best model
-#     best_model = py_reg.compare_models()
-#     logging.info(f"Best Regression Model: {best_model}")
-#     click.secho(f"Best regression model: {best_model}", fg='blue')
+# def init_h2o():
+#     """Initialize the H2O cluster."""
+#     h2o.init()
 
 
-# def perform_clustering(df):
-#     """Run a clustering task using PyCaret."""
-#     logging.info("Starting clustering task with PyCaret")
+# def load_data(file_path):
+#     """Load data into H2O from a specified file path."""
+#     return h2o.import_file(file_path)
+
+
+# def run_automl_classifier(train, target_column, max_models=20, seed=1):
+#     """Run H2O AutoML for classification tasks."""
+#     # Specify predictors and response
+#     x = train.columns
+#     x.remove(target_column)
     
-#     # Set up PyCaret for clustering
-#     py_clust.setup(data=df, silent=True, html=False)
-    
-#     # Create and evaluate clustering models
-#     best_model = py_clust.create_model('kmeans')
-#     logging.info(f"Best Clustering Model: {best_model}")
-#     click.secho(f"Best clustering model: {best_model}", fg='blue')
+#     # Convert target variable to factor for classification
+#     train[target_column] = train[target_column].asfactor()
+
+#     # Create and train the H2O AutoML Classifier
+#     aml_classifier = H2OAutoMLClassifier(max_models=max_models, seed=seed)
+#     aml_classifier.fit(X=x, y=target_column, training_frame=train)
+
+#     return aml_classifier
+
+
+# def run_automl_regressor(train, target_column, max_models=20, seed=1):
+#     """Run H2O AutoML for regression tasks."""
+#     # Specify predictors and response
+#     x = train.columns
+#     x.remove(target_column)
+
+#     # Create and train the H2O AutoML Regressor
+#     aml_regressor = H2OAutoMLRegressor(max_models=max_models, seed=seed)
+#     aml_regressor.fit(X=x, y=target_column, training_frame=train)
+
+#     return aml_regressor
+
+
+# def print_leaderboard(automl_model):
+#     """Print the leaderboard of models."""
+#     lb = automl_model.leaderboard
+#     print(lb)

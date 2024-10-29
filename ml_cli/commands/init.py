@@ -51,9 +51,9 @@ def init(format, ssl_verify):
     
     start_time = time.time()  # Start timing
 
-    logging.info("Prompting user for project initialization directory")
     # Determine the target directory based on user choice
     target_directory = get_target_directory()
+    os.chdir(target_directory)
 
     data_path = click.prompt('Please enter the data directory path', type=str)
     
@@ -111,3 +111,4 @@ def init(format, ssl_verify):
     elapsed_time = end_time - start_time
     click.secho(f"Configuration file created at : {config_filename}", fg="green")
     logging.info(f"Configuration file created! (Time taken: {elapsed_time:.2f}s)")
+    logging.info("Current Working Directory: " + os.getcwd())

@@ -11,8 +11,6 @@ Classifier: Operating System :: OS Independent
 Requires-Python: >=3.9
 Description-Content-Type: text/markdown
 Requires-Dist: pandas
-Requires-Dist: numpy
-Requires-Dist: scikit-learn
 Requires-Dist: click
 Requires-Dist: pyyaml
 Requires-Dist: questionary
@@ -22,6 +20,10 @@ Requires-Dist: configparser
 Requires-Dist: python-dotenv
 Requires-Dist: requests
 Requires-Dist: pycaret
+Requires-Dist: numpy
+Requires-Dist: scikit-learn
+Requires-Dist: torch
+Requires-Dist: tpot
 
 # ml_cli
 Build a Comman Line Interface for Machine Learning
