@@ -3,6 +3,7 @@ from ml_cli.commands.init import init
 from ml_cli.commands.run import run
 from ml_cli.commands.eda import eda
 from ml_cli.commands.preprocess import preprocess
+from ml_cli.commands.clean import clean
 
 @click.group()
 def cli():
@@ -13,6 +14,7 @@ cli.add_command(init)
 cli.add_command(run)
 cli.add_command(eda)
 cli.add_command(preprocess)
+cli.add_command(clean)
 
 if __name__ == '__main__':
     cli()

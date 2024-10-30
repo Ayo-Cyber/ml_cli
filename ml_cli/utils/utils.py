@@ -8,8 +8,6 @@ import click
 import sys
 import logging
 import ssl
-import h2o
-from h2o.sklearn import H2OAutoMLClassifier, H2OAutoMLRegressor
 
 
 # Constants for file extensions
@@ -48,13 +46,6 @@ def should_prompt_target_column(task_type):
     """Check if the target column prompt is needed based on task type."""
     return task_type in ['classification', 'regression']
 
-
-def get_dependencies(task_type):
-    """Return a list of dependencies based on the task type."""
-    dependencies = ['pandas', 'numpy', 'scikit-learn', 'click', 'pyyaml']
-    if task_type in ['classification', 'regression']:
-        dependencies.append('matplotlib')  # Add libraries useful for classification/regression
-    return dependencies
 
 
 def is_readable_file(data_path, ssl_verify=True):
@@ -164,49 +155,56 @@ def validate_existing_directory(target_directory):
         click.secho("Error: The specified directory does not exist.", fg='red')
         sys.exit(1)
 
+def log_artifact(file_path):
+    """Log the generated artifact file path to `.artifacts.log`."""
+    artifact_log_path = os.path.join(os.getcwd(), '.artifacts.log')
+    with open(artifact_log_path, 'a') as log_file:
+        log_file.write(file_path + '\n')
 
 
+def load_config(config_file='config.yaml'):
+    """Load configuration file to get the data path."""
+    try:
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f)
+        data_path = config_data['data']['data_path']
+        return data_path
+    except Exception as e:
+        click.secho(f"Error reading configuration file: {e}", fg='red')
+        logging.error(f"Error reading configuration file: {e}")
+        return None
 
-# def init_h2o():
-#     """Initialize the H2O cluster."""
-#     h2o.init()
+def load_data(data_path):
+    """Load the dataset from a specified path."""
+    try:
+        df = pd.read_csv(data_path)
+        logging.info("Data loaded successfully for preprocessing.")
+        return df
+    except Exception as e:
+        click.secho(f"Error loading data for preprocessing: {e}", fg='red')
+        logging.error(f"Error loading data for preprocessing: {e}")
+        return None
 
+def encode_categorical_columns(df):
+    """One-hot encode categorical columns in the DataFrame."""
+    try:
+        object_cols = df.select_dtypes(include=['object']).columns
+        if len(object_cols) > 0:
+            df = pd.get_dummies(df, columns=object_cols, drop_first=True)
+            logging.info(f"One-hot encoded columns: {list(object_cols)}")
+        return df
+    except Exception as e:
+        click.secho(f"Error during one-hot encoding: {e}", fg='red')
+        logging.error(f"Error during one-hot encoding: {e}")
+        return None
 
-# def load_data(file_path):
-#     """Load data into H2O from a specified file path."""
-#     return h2o.import_file(file_path)
-
-
-# def run_automl_classifier(train, target_column, max_models=20, seed=1):
-#     """Run H2O AutoML for classification tasks."""
-#     # Specify predictors and response
-#     x = train.columns
-#     x.remove(target_column)
-    
-#     # Convert target variable to factor for classification
-#     train[target_column] = train[target_column].asfactor()
-
-#     # Create and train the H2O AutoML Classifier
-#     aml_classifier = H2OAutoMLClassifier(max_models=max_models, seed=seed)
-#     aml_classifier.fit(X=x, y=target_column, training_frame=train)
-
-#     return aml_classifier
-
-
-# def run_automl_regressor(train, target_column, max_models=20, seed=1):
-#     """Run H2O AutoML for regression tasks."""
-#     # Specify predictors and response
-#     x = train.columns
-#     x.remove(target_column)
-
-#     # Create and train the H2O AutoML Regressor
-#     aml_regressor = H2OAutoMLRegressor(max_models=max_models, seed=seed)
-#     aml_regressor.fit(X=x, y=target_column, training_frame=train)
-
-#     return aml_regressor
-
-
-# def print_leaderboard(automl_model):
-#     """Print the leaderboard of models."""
-#     lb = automl_model.leaderboard
-#     print(lb)
+def save_preprocessed_data(df, file_path):
+    """Save the preprocessed DataFrame to a specified file path."""
+    try:
+        df.to_csv(file_path, index=False)
+        click.secho(f"Preprocessed data saved to {file_path}", fg="green")
+        logging.info(f"Preprocessed data saved at: {file_path}")
+        log_artifact(file_path)
+    except Exception as e:
+        click.secho(f"Error saving preprocessed data: {e}", fg='red')
+        logging.error(f"Error saving preprocessed data: {e}")

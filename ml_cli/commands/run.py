@@ -6,6 +6,7 @@ import yaml
 from tpot import TPOTClassifier, TPOTRegressor
 from sklearn.model_selection import train_test_split
 import pandas as pd
+from ml_cli.utils.utils import log_artifact
 
 @click.command()
 def run():
@@ -17,10 +18,13 @@ def run():
         click.secho("Error: Configuration file 'config.yaml' not found in the current directory.", fg='red')
         logging.error("Configuration file not found.")
         sys.exit(1)
-
+    
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
 
+    # Log the config file artifact
+    log_artifact(config_path)
+    
     # Check for a preprocessed CSV file in the current directory
     data_dir = os.getcwd()  # Assuming data is in the current working directory
     preprocessed_csv_path = os.path.join(data_dir, 'preprocessed_data.csv')
@@ -30,14 +34,14 @@ def run():
     if os.path.exists(preprocessed_csv_path):
         click.secho(f"Preprocessed CSV found: {preprocessed_csv_path}. Using this file.", fg='green')
         data_path = preprocessed_csv_path
-        # Use target_column from the configuration
         target_column = config['data']['target_column']  # Get the target column from config
+        
+        # Log the preprocessed data file as an artifact
+        log_artifact(preprocessed_csv_path)
     else:
         click.secho("No preprocessed CSV found. Using unprocessed data.", fg='yellow')
-        
-        # Extract parameters from the config
         data_path = config['data']['data_path']
-        target_column = config['data']['target_column']  # Still extract the target column
+        target_column = config['data']['target_column']
 
     # Load the dataset
     try:
@@ -61,7 +65,7 @@ def run():
         sys.exit(1)
 
     # Initialize the model based on the task type
-    task_type = config['task']['type']  # Extract task type from config
+    task_type = config['task']['type']
     if task_type == "classification":
         model = TPOTClassifier(generations=4, verbosity=2, random_state=42, n_jobs=-1)
     elif task_type == "regression":
@@ -77,10 +81,13 @@ def run():
         model.fit(X_train, y_train)
 
         # Save the optimized pipeline
-        output_dir = os.path.dirname(config_path) if os.path.exists(config_path) else data_dir  # Get the directory from config or use current directory
+        output_dir = os.path.dirname(config_path) if os.path.exists(config_path) else data_dir
         model_file_path = os.path.join(output_dir, 'best_model_pipeline.py')
         model.export(model_file_path)
         logging.info(f"Model pipeline exported to {model_file_path}")
+
+        # Log the exported model file as an artifact
+        log_artifact(model_file_path)
 
         # Log performance metrics
         score = model.score(X_test, y_test)

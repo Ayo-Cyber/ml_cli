@@ -6,6 +6,7 @@ import yaml
 import logging
 import click
 import matplotlib.font_manager as fm
+from ml_cli.utils.utils import log_artifact
 
 plt.rcParams['font.family'] = 'Arial'
 
@@ -51,6 +52,7 @@ def eda():
         
         click.secho(f"Summary statistics saved to {summary_file}", fg="green")
         logging.info(f"Summary statistics generated and saved at: {summary_file}")
+        log_artifact(summary_file)
     except Exception as e:
         click.secho(f"Error generating summary statistics: {e}", fg='red')
         logging.error(f"Error generating summary statistics: {e}")
@@ -73,6 +75,7 @@ def eda():
         
         click.secho(f"EDA report saved to {eda_report_file}", fg="green")
         logging.info(f"EDA report generated and saved at: {eda_report_file}")
+        log_artifact(eda_report_file)
     except Exception as e:
         click.secho(f"Error generating EDA report: {e}", fg='red')
         logging.error(f"Error generating EDA report: {e}")
@@ -96,6 +99,7 @@ def eda():
         
         click.secho(f"Correlation matrix heatmap saved to {correlation_matrix_file}", fg="green")
         logging.info(f"Correlation matrix heatmap generated and saved at: {correlation_matrix_file}")
+        log_artifact(correlation_matrix_file)
     except Exception as e:
         click.secho(f"Error generating correlation matrix: {e}", fg='red')
         logging.error(f"Error generating correlation matrix: {e}")

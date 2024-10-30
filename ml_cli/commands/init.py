@@ -7,13 +7,14 @@ import os
 import logging
 import time
 import io 
-from ml_cli.utils.utils import (write_config,
-    should_prompt_target_column,
-    get_dependencies, 
+from ml_cli.utils.utils import (
+    write_config,
+    should_prompt_target_column, 
     is_readable_file,
     is_target_in_file,
-    get_target_directory)
-
+    get_target_directory,
+    log_artifact
+)
 
 # Constants
 KEYBOARD_INTERRUPT_MESSAGE = "Operation cancelled by user."
@@ -88,8 +89,6 @@ def init(format, ssl_verify):
         logging.error(f"Target column '{target_column}' not found in the data file.")
         sys.exit(1)
 
-    dependencies = get_dependencies(task_type)
-
     config_data = {
         'data': {
             'data_path': data_path,
@@ -97,8 +96,7 @@ def init(format, ssl_verify):
         },
         'task': {
             'type': task_type,
-        },
-        'dependencies': dependencies,
+        }
     }
 
     # Prepare configuration filename and log the action
@@ -107,8 +105,11 @@ def init(format, ssl_verify):
 
     write_config(config_data, format, config_filename)
 
+    # Log the generated configuration file as an artifact
+    log_artifact(config_filename)
+
     end_time = time.time()  # End timing
     elapsed_time = end_time - start_time
-    click.secho(f"Configuration file created at : {config_filename}", fg="green")
+    click.secho(f"Configuration file created at: {config_filename}", fg="green")
     logging.info(f"Configuration file created! (Time taken: {elapsed_time:.2f}s)")
     logging.info("Current Working Directory: " + os.getcwd())
