@@ -8,9 +8,10 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 from ml_cli.utils.utils import log_artifact
 
-@click.command()
+@click.command(help="Run the ML pipeline based on the configuration.")
 def run():
     """Run the ML pipeline based on the configuration."""
+    click.secho("Running ML pipeline...", fg="green")
     
     # Load the configuration file
     config_path = os.path.join(os.getcwd(), 'config.yaml')  # Adjust as necessary

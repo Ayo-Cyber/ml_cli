@@ -44,11 +44,13 @@ logging.basicConfig(
 for handler in logging.getLogger().handlers:
     handler.setFormatter(ColorFormatter())
 
-@click.command()
+@click.command(help="Initialize a new configuration file (YAML or JSON)")
 @click.option('--format', default='yaml', type=click.Choice(['yaml', 'json']), help='Format of the configuration file (yaml or json)')
 @click.option('--ssl-verify/--no-ssl-verify', default=True, help='Enable or disable SSL verification for URL data paths')
 def init(format, ssl_verify):
     """Initialize a new configuration file (YAML or JSON)"""
+    click.secho("Initializing configuration...", fg="green")
+
     
     start_time = time.time()  # Start timing
 

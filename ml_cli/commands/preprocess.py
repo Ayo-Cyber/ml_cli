@@ -9,9 +9,10 @@ import matplotlib.font_manager as fm
 from sklearn.preprocessing import OneHotEncoder
 from ml_cli.utils.utils import log_artifact
 
-@click.command()
+@click.command(help="Preprocess the dataset to handle non-numeric columns using OneHotEncoder.")
 def preprocess():
     """Preprocess the dataset to handle non-numeric columns using OneHotEncoder."""
+    click.secho("Preprocessing data...", fg="green")
     
     # Load the configuration file to get the data path
     config_file = 'config.yaml'

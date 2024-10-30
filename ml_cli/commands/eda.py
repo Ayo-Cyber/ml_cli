@@ -10,10 +10,11 @@ from ml_cli.utils.utils import log_artifact
 
 plt.rcParams['font.family'] = 'Arial'
 
-@click.command()
+@click.command(help="Perform exploratory data analysis on the dataset.")
 def eda():
     """Perform exploratory data analysis on the dataset."""
     
+    click.secho("Performing EDA ...", fg="green")
     # Load the configuration file to get the data path
     config_file = 'config.yaml'
     try:
