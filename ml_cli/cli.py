@@ -5,18 +5,21 @@ from ml_cli.commands.eda import eda
 from ml_cli.commands.preprocess import preprocess
 from ml_cli.commands.clean import clean
 
-# Custom command class to handle color in help text
+# Custom command class to handle color and borders in help text
 class CustomHelpCommand(click.Group):
     def format_help(self, ctx, formatter):
-        # Title and usage
+        # Title and usage section with borders
+        click.secho("-" * 40, fg="blue", bold=True)
         click.secho("Usage:", fg="yellow", bold=True)
         click.echo("  ml [OPTIONS] COMMAND [ARGS]...\n")
         
-        # Options section
+        # Options section with borders
+        click.secho("\n" + "-" * 40, fg="blue", bold=True)
         click.secho("Options:", fg="yellow", bold=True)
         click.echo(click.style("  --help", fg="cyan") + "  Show this message and exit.\n")
         
-        # Commands section
+        # Commands section with borders
+        click.secho("\n" + "-" * 40, fg="blue", bold=True)
         click.secho("Commands:", fg="yellow", bold=True)
         commands = [
             ("init", "Initialize a new configuration file (YAML or JSON)"),
@@ -27,6 +30,7 @@ class CustomHelpCommand(click.Group):
         ]
         for cmd, description in commands:
             click.echo(click.style(f"  {cmd}", fg="green", bold=True) + f"  {description}")
+        click.secho("-" * 40, fg="blue", bold=True)
 
 @click.group(cls=CustomHelpCommand)
 def cli():
