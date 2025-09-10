@@ -6,7 +6,8 @@ from ml_cli.utils.utils import log_artifact
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 
-@click.command()
+@click.command(help="""Clean up all generated artifacts recorded in .artifacts.log.
+""")
 def clean():
     """Clean up all generated artifacts recorded in .artifacts.log."""
 

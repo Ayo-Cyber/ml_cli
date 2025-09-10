@@ -8,9 +8,10 @@ import click
 import matplotlib.font_manager as fm
 from ml_cli.utils.utils import log_artifact
 
-plt.rcParams['font.family'] = 'Arial'
 
-@click.command(help="Perform exploratory data analysis on the dataset.")
+
+@click.command(help="""Perform exploratory data analysis (EDA) on the dataset specified in the configuration file.
+""")
 def eda():
     """Perform exploratory data analysis on the dataset."""
     

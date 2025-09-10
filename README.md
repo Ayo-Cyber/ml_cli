@@ -1,4 +1,3 @@
-```markdown
 # ML CLI Pipeline
 
 This project provides a command-line interface (CLI) for running a machine learning pipeline using the TPOT library. It facilitates the automation of the machine learning workflow, including data loading, preprocessing, model training, and exporting the best-performing model.
@@ -10,6 +9,9 @@ This project provides a command-line interface (CLI) for running a machine learn
 - Supports classification and regression tasks using TPOT.
 - Configurable through a YAML file.
 - Exports the optimized machine learning pipeline to a Python file.
+- **New:** Train the model separately using the `train` command.
+- **New:** Make predictions on new data using the `predict` command.
+- **New:** Serve the trained model as a REST API using the `serve` command.
 
 ## Requirements
 
@@ -71,6 +73,32 @@ ml run
 
 This command will check for the preprocessed CSV file and load it if found. If not found, it will use the raw data specified in the `config.yaml` file.
 
+### Train the model
+
+To train the model separately, use the `train` command:
+
+```bash
+ml train
+```
+
+### Make predictions
+
+To make predictions on new data, use the `predict` command:
+
+```bash
+ml predict --input-path /path/to/new_data.csv --output-path /path/to/predictions.csv --model-path /path/to/best_model_pipeline.py
+```
+
+### Serve the model
+
+To serve the trained model as a REST API, use the `serve` command:
+
+```bash
+ml serve
+```
+
+This will start a FastAPI server at `http://127.0.0.1:8000`.
+
 ## Error Handling
 
 If an error occurs during data loading or processing, you will be prompted to run the preprocessing command to prepare your data.
@@ -86,7 +114,7 @@ Contributions are welcome! Please feel free to submit a pull request or open an 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-```
+
 
 ### Markdown Notes:
 - Make sure to replace `yourusername/your-repo-name` with your actual GitHub repository URL.

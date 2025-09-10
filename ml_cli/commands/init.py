@@ -44,7 +44,12 @@ logging.basicConfig(
 for handler in logging.getLogger().handlers:
     handler.setFormatter(ColorFormatter())
 
-@click.command(help="Initialize a new configuration file (YAML or JSON)")
+@click.command(help="""Initialize a new configuration file (YAML or JSON).
+
+Usage examples:
+  ml init
+  ml init --format json
+""")
 @click.option('--format', default='yaml', type=click.Choice(['yaml', 'json']), help='Format of the configuration file (yaml or json)')
 @click.option('--ssl-verify/--no-ssl-verify', default=True, help='Enable or disable SSL verification for URL data paths')
 def init(format, ssl_verify):
@@ -56,7 +61,6 @@ def init(format, ssl_verify):
 
     # Determine the target directory based on user choice
     target_directory = get_target_directory()
-    os.chdir(target_directory)
 
     data_path = click.prompt('Please enter the data directory path', type=str)
     
@@ -91,6 +95,9 @@ def init(format, ssl_verify):
         logging.error(f"Target column '{target_column}' not found in the data file.")
         sys.exit(1)
 
+    output_dir = click.prompt('Please enter the output directory path', type=str, default='output')
+    generations = click.prompt('Please enter the number of TPOT generations', type=int, default=4)
+
     config_data = {
         'data': {
             'data_path': data_path,
@@ -98,6 +105,10 @@ def init(format, ssl_verify):
         },
         'task': {
             'type': task_type,
+        },
+        'output_dir': output_dir,
+        'tpot': {
+            'generations': generations
         }
     }
 
