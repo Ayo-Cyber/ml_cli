@@ -19,20 +19,6 @@ from ml_cli.utils.utils import (
 # Constants
 KEYBOARD_INTERRUPT_MESSAGE = "Operation cancelled by user."
 
-# ANSI escape codes for coloring text
-class ColorFormatter(logging.Formatter):
-    COLORS = {
-        'INFO': '\033[92m',   # Green
-        'WARNING': '\033[93m', # Yellow
-        'ERROR': '\033[91m',   # Red
-        'RESET': '\033[0m',    # Reset to default
-    }
-
-    def format(self, record):
-        color = self.COLORS.get(record.levelname, self.COLORS['RESET'])
-        message = super().format(record)
-        return f"{color}{message}{self.COLORS['RESET']}"
-
 # Configure logging without timestamps
 logging.basicConfig(
     level=logging.INFO,
@@ -40,9 +26,68 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 
-# Change the default formatter to the color formatter
-for handler in logging.getLogger().handlers:
-    handler.setFormatter(ColorFormatter())
+def create_convenience_script(target_directory):
+    """Create a convenience script to help users navigate to the project directory."""
+    script_name = "start_ml_project.sh"
+    script_path = os.path.join(target_directory, script_name)
+    
+    # Also create a simple alias script
+    alias_script_name = "goto_project.sh"
+    alias_script_path = os.path.join(target_directory, alias_script_name)
+    
+    script_content = f"""#!/bin/bash
+# ML CLI Project Convenience Script
+# This script helps you quickly navigate to your ML project and see available commands
+
+echo "🚀 ML CLI Project Directory"
+echo "=========================="
+echo "📁 Project location: {target_directory}"
+echo ""
+
+# Change to project directory
+cd "{target_directory}"
+
+echo "✅ Changed to project directory!"
+echo ""
+echo "💡 Available commands:"
+echo "   ml train      - Train your model"
+echo "   ml serve      - Serve your model as an API"
+echo "   ml predict    - Make predictions"
+echo "   ml preprocess - Preprocess your data"
+echo "   ml eda        - Exploratory data analysis"
+echo "   ml clean      - Clean up artifacts"
+echo ""
+echo "🔍 To get started, run: ml train"
+echo ""
+
+# Start a new shell in the project directory
+exec $SHELL
+"""
+
+    alias_content = f"""#!/bin/bash
+# Simple navigation script
+# Usage: source {alias_script_name}
+cd "{target_directory}"
+echo "✅ Navigated to ML project directory: {target_directory}"
+"""
+    
+    try:
+        # Create main convenience script
+        with open(script_path, 'w') as f:
+            f.write(script_content)
+        os.chmod(script_path, 0o755)
+        log_artifact(script_path)
+        
+        # Create simple alias script
+        with open(alias_script_path, 'w') as f:
+            f.write(alias_content)
+        os.chmod(alias_script_path, 0o755)
+        log_artifact(alias_script_path)
+        
+        return script_path, alias_script_path
+    except Exception as e:
+        logging.warning(f"Could not create convenience script: {e}")
+        return None, None
 
 @click.command(help="""Initialize a new configuration file (YAML or JSON).
 
@@ -120,9 +165,41 @@ def init(format, ssl_verify):
 
     # Log the generated configuration file as an artifact
     log_artifact(config_filename)
+    
+    # Create a convenience script for easy navigation
+    create_convenience_script(target_directory)
 
     end_time = time.time()  # End timing
     elapsed_time = end_time - start_time
     click.secho(f"Configuration file created at: {config_filename}", fg="green")
     logging.info(f"Configuration file created! (Time taken: {elapsed_time:.2f}s)")
-    logging.info("Current Working Directory: " + os.getcwd())
+    
+    # Get the current working directory (which may have been changed during init)
+    current_dir = os.getcwd()
+    
+    # If we're not in the original directory, provide clear instructions
+    if target_directory != os.path.dirname(config_filename) or target_directory != current_dir:
+        click.secho(f"\n📁 Project initialized in: {target_directory}", fg="blue", bold=True)
+        click.secho(f"💡 To start working with your project, choose one of:", fg="yellow")
+        click.secho(f"", fg="white")
+        click.secho(f"   Option 1 - Manual navigation:", fg="green")
+        click.secho(f"   cd {target_directory}", fg="cyan", bold=True)
+        click.secho(f"   ml train", fg="cyan")
+        click.secho(f"", fg="white")
+        click.secho(f"   Option 2 - Quick navigation (source to change current shell):", fg="green")
+        click.secho(f"   source {os.path.join(target_directory, 'goto_project.sh')}", fg="cyan", bold=True)
+        click.secho(f"", fg="white")
+        click.secho(f"   Option 3 - Full project environment (opens new shell):", fg="green")
+        click.secho(f"   {os.path.join(target_directory, 'start_ml_project.sh')}", fg="cyan", bold=True)
+    else:
+        click.secho(f"\n✅ Project initialized in current directory!", fg="green", bold=True)
+        click.secho(f"💡 You can now run:", fg="yellow")
+        click.secho(f"   ml train", fg="cyan", bold=True)
+    
+    click.secho(f"\n📋 Available commands:", fg="blue")
+    click.secho(f"   ml train      - Train your model", fg="white")
+    click.secho(f"   ml serve      - Serve your model as an API", fg="white")
+    click.secho(f"   ml predict    - Make predictions", fg="white")
+    click.secho(f"   ml preprocess - Preprocess your data", fg="white")
+    
+    logging.info("Current Working Directory: " + current_dir)

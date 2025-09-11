@@ -9,6 +9,17 @@ import matplotlib.font_manager as fm
 from ml_cli.utils.utils import log_artifact
 
 
+def load_config(config_file='config.yaml'):
+    """Load configuration file to get the data path."""
+    try:
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f)
+        data_path = config_data['data']['data_path']
+        return data_path
+    except Exception as e:
+        click.secho(f"Error reading configuration file: {e}", fg='red')
+        logging.error(f"Error reading configuration file: {e}")
+        return None
 
 @click.command(help="""Perform exploratory data analysis (EDA) on the dataset specified in the configuration file.
 """)
@@ -17,14 +28,8 @@ def eda():
     
     click.secho("Performing EDA ...", fg="green")
     # Load the configuration file to get the data path
-    config_file = 'config.yaml'
-    try:
-        with open(config_file, 'r') as f:
-            config_data = yaml.safe_load(f)
-        data_path = config_data['data']['data_path']
-    except Exception as e:
-        click.secho(f"Error reading configuration file: {e}", fg='red')
-        logging.error(f"Error reading configuration file: {e}")
+    data_path = load_config()
+    if not data_path:
         return
     
     # Define artifact file paths

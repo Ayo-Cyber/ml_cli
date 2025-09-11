@@ -5,7 +5,7 @@ with open('requirements.txt') as f:
     required = f.read().splitlines()
 
 setup(
-    name='ml_cli',
+    name='ml_cli', 
     version='0.1',
     packages=find_packages(),
     install_requires=required,  # Directly reads dependencies from requirements.txt

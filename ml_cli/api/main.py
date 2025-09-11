@@ -1,49 +1,122 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-import pandas as pd
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier
 
+import joblib
+import pandas as pd
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel, create_model
+from typing import Optional, Dict, Any, Union, List
+import os
+import json
+import logging
+import sys
+from pathlib import Path
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
+
+# Create the FastAPI app
 app = FastAPI()
 
-class PredictionInput(BaseModel):
-    # Define the input schema for your model
-    # This should match the columns of your training data
-    # Example:
-    feature1: float
-    feature2: float
+pipeline = None
+feature_info = None
+PredictionPayload = None
 
-@app.post("/predict")
-def predict(input_data: PredictionInput):
-    """Make predictions using the trained model."""
+def load_model(output_dir: str):
+    global pipeline, feature_info, PredictionPayload
     try:
-        # Convert input data to a pandas DataFrame
-        input_df = pd.DataFrame([input_data.dict()])
+        pipeline_path = Path(output_dir) / "fitted_pipeline.pkl"
+        feature_info_path = Path(output_dir) / "feature_info.json"
 
-        # This is a placeholder for loading your actual trained model
-        # In a real scenario, you would load the saved model here
-        # For example, using joblib or pickle
-        # from sklearn.externals import joblib
-        # model = joblib.load('path/to/your/model.pkl')
+        if not pipeline_path.exists() or not feature_info_path.exists():
+            logging.warning("Model files not found. API will start but predictions will not work.")
+            return
 
-        # For demonstration, we create and fit a dummy pipeline
-        # This should be replaced by your actual trained pipeline
-        pipeline = make_pipeline(StandardScaler(), RandomForestClassifier(random_state=42))
-        
-        # Fit the pipeline with dummy data to simulate a trained model
-        from sklearn.datasets import make_classification
-        X_dummy, y_dummy = make_classification(n_samples=100, n_features=len(input_df.columns), n_informative=len(input_df.columns), n_redundant=0, random_state=42)
-        pipeline.fit(X_dummy, y_dummy)
+        pipeline = joblib.load(pipeline_path)
+        with open(feature_info_path, 'r') as f:
+            feature_info = json.load(f)
 
-        # Make predictions
-        prediction = pipeline.predict(input_df)
+        # Create the dynamic Pydantic model
+        def create_pydantic_model(name, feature_info):
+            fields = {}
+            for feature, feature_type in feature_info['feature_types'].items():
+                if pd.api.types.is_integer_dtype(feature_type):
+                    fields[feature] = (int, ...)
+                elif pd.api.types.is_float_dtype(feature_type):
+                    fields[feature] = (float, ...)
+                else:
+                    fields[feature] = (str, ...)
+            return create_model(name, **fields)
 
-        return {"prediction": prediction.tolist()}
+        PredictionPayload = create_pydantic_model("PredictionPayload", feature_info)
+        logging.info("Model loaded successfully.")
 
     except Exception as e:
-        return {"error": str(e)}
+        logging.error(f"Error loading model: {e}")
+
+@app.on_event("startup")
+def startup_event():
+    config_path = os.getenv("ML_CLI_CONFIG", "config.yaml")
+    output_dir = "output"
+    if os.path.exists(config_path):
+        import yaml
+        with open(config_path, 'r') as f:
+            try:
+                config = yaml.safe_load(f)
+                output_dir = config.get('output_dir', 'output')
+            except yaml.YAMLError as exc:
+                logging.error(exc)
+    load_model(output_dir)
+
+@app.post("/predict")
+def predict(payload: BaseModel):
+    """
+    Make a prediction based on the input payload.
+    """
+    if not pipeline or not feature_info or not PredictionPayload:
+        raise HTTPException(status_code=503, detail="Model not loaded. Please train a model first.")
+
+    try:
+        # Convert the payload to a DataFrame
+        df = pd.DataFrame([payload.dict()])
+
+        # Make a prediction
+        prediction = pipeline.predict(df)
+
+        # Return the prediction
+        return {"prediction": prediction.tolist()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/")
-def read_root():
-    return {"message": "Welcome to the ML Model API"}
+def root():
+    return {"message": "Welcome to the ML-CLI API!"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+@app.get("/model-info")
+def model_info():
+    if not feature_info:
+        raise HTTPException(status_code=503, detail="Model not loaded. Please train a model first.")
+    return feature_info
+
+@app.get("/sample-input")
+def sample_input():
+    if not feature_info:
+        raise HTTPException(status_code=503, detail="Model not loaded. Please train a model first.")
+
+    sample = {}
+    for feature, feature_type in feature_info['feature_types'].items():
+        if pd.api.types.is_integer_dtype(feature_type):
+            sample[feature] = 0
+        elif pd.api.types.is_float_dtype(feature_type):
+            sample[feature] = 0.0
+        else:
+            sample[feature] = "string"
+    return {"sample_input": sample}
+
+@app.post("/reload-model")
+def reload_model():
+    startup_event()
+    return {"message": "Model reloaded successfully."}
+

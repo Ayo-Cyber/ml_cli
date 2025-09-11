@@ -1,8 +1,0 @@
-data:
-  data_path: https://raw.githubusercontent.com/nmiuddin/UCI-Heart-Disease-Dataset/refs/heads/master/data/heart-disease-UCI.csv
-  target_column: target
-output_dir: output
-task:
-  type: classification
-tpot:
-  generations: 1
