@@ -7,6 +7,7 @@ import questionary
 import click
 import sys
 import logging
+import io
 
 
 # Constants for file extensions
@@ -72,10 +73,9 @@ def is_target_in_file(data_path, target_column, ssl_verify=True):
     try:
         if data_path.startswith('http://') or data_path.startswith('https://'):
             # Fetch data from URL
-            storage_options = {'User-Agent': 'Mozilla/5.0'}
-            if not ssl_verify:
-                storage_options['ssl_verify'] = False
-            df = pd.read_csv(data_path, storage_options=storage_options)
+            response = requests.get(data_path, verify=ssl_verify)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            df = pd.read_csv(io.StringIO(response.text))
         else:
             # Load data locally
             df = pd.read_csv(data_path)

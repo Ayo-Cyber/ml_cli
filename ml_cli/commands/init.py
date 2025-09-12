@@ -28,66 +28,27 @@ logging.basicConfig(
 
 def create_convenience_script(target_directory):
     """Create a convenience script to help users navigate to the project directory."""
-    script_name = "start_ml_project.sh"
+    script_name = "activate.sh"
     script_path = os.path.join(target_directory, script_name)
     
-    # Also create a simple alias script
-    alias_script_name = "goto_project.sh"
-    alias_script_path = os.path.join(target_directory, alias_script_name)
-    
     script_content = f"""#!/bin/bash
-# ML CLI Project Convenience Script
-# This script helps you quickly navigate to your ML project and see available commands
+# Activate ML project environment
+# Usage: source {script_name}
 
-echo "🚀 ML CLI Project Directory"
-echo "=========================="
-echo "📁 Project location: {target_directory}"
-echo ""
-
-# Change to project directory
 cd "{target_directory}"
-
-echo "✅ Changed to project directory!"
-echo ""
-echo "💡 Available commands:"
-echo "   ml train      - Train your model"
-echo "   ml serve      - Serve your model as an API"
-echo "   ml predict    - Make predictions"
-echo "   ml preprocess - Preprocess your data"
-echo "   ml eda        - Exploratory data analysis"
-echo "   ml clean      - Clean up artifacts"
-echo ""
-echo "🔍 To get started, run: ml train"
-echo ""
-
-# Start a new shell in the project directory
-exec $SHELL
-"""
-
-    alias_content = f"""#!/bin/bash
-# Simple navigation script
-# Usage: source {alias_script_name}
-cd "{target_directory}"
-echo "✅ Navigated to ML project directory: {target_directory}"
+echo "✅ Activated ML project environment in: {target_directory}"
+echo "💡 You can now run commands like 'ml train', 'ml serve', etc."
 """
     
     try:
-        # Create main convenience script
         with open(script_path, 'w') as f:
             f.write(script_content)
         os.chmod(script_path, 0o755)
         log_artifact(script_path)
-        
-        # Create simple alias script
-        with open(alias_script_path, 'w') as f:
-            f.write(alias_content)
-        os.chmod(alias_script_path, 0o755)
-        log_artifact(alias_script_path)
-        
-        return script_path, alias_script_path
+        return script_path
     except Exception as e:
         logging.warning(f"Could not create convenience script: {e}")
-        return None, None
+        return None
 
 @click.command(help="""Initialize a new configuration file (YAML or JSON).
 
@@ -104,8 +65,14 @@ def init(format, ssl_verify):
     
     start_time = time.time()  # Start timing
 
+    # Store the original working directory before any changes
+    original_dir = os.getcwd()
+
     # Determine the target directory based on user choice
     target_directory = get_target_directory()
+
+    # Track if we created a new directory
+    created_new_directory = target_directory != original_dir
 
     data_path = click.prompt('Please enter the data directory path', type=str)
     
@@ -174,32 +141,29 @@ def init(format, ssl_verify):
     click.secho(f"Configuration file created at: {config_filename}", fg="green")
     logging.info(f"Configuration file created! (Time taken: {elapsed_time:.2f}s)")
     
-    # Get the current working directory (which may have been changed during init)
+    # Get the current working directory
     current_dir = os.getcwd()
     
-    # If we're not in the original directory, provide clear instructions
-    if target_directory != os.path.dirname(config_filename) or target_directory != current_dir:
-        click.secho(f"\n📁 Project initialized in: {target_directory}", fg="blue", bold=True)
-        click.secho(f"💡 To start working with your project, choose one of:", fg="yellow")
-        click.secho(f"", fg="white")
-        click.secho(f"   Option 1 - Manual navigation:", fg="green")
+    # Provide clear instructions based on whether we created a new directory
+    if created_new_directory:
+        activate_script_path = os.path.join(target_directory, 'activate.sh')
+        click.secho(f"\n✅ Project initialized in: {target_directory}", fg="green", bold=True)
+        click.secho(f"⚠️  Your terminal is still in: {original_dir}", fg="yellow")
+        click.secho(f"\n💡 To move to your project directory, run:", fg="yellow")
         click.secho(f"   cd {target_directory}", fg="cyan", bold=True)
-        click.secho(f"   ml train", fg="cyan")
-        click.secho(f"", fg="white")
-        click.secho(f"   Option 2 - Quick navigation (source to change current shell):", fg="green")
-        click.secho(f"   source {os.path.join(target_directory, 'goto_project.sh')}", fg="cyan", bold=True)
-        click.secho(f"", fg="white")
-        click.secho(f"   Option 3 - Full project environment (opens new shell):", fg="green")
-        click.secho(f"   {os.path.join(target_directory, 'start_ml_project.sh')}", fg="cyan", bold=True)
+        click.secho(f"   # OR source the activation script:", fg="blue")
+        click.secho(f"   source {activate_script_path}", fg="cyan")
     else:
         click.secho(f"\n✅ Project initialized in current directory!", fg="green", bold=True)
-        click.secho(f"💡 You can now run:", fg="yellow")
-        click.secho(f"   ml train", fg="cyan", bold=True)
+        click.secho(f"💡 You can now run commands like 'ml train'.", fg="yellow")
     
     click.secho(f"\n📋 Available commands:", fg="blue")
+    click.secho(f"   ml eda       - Perform exploratory data analysis", fg="white")
     click.secho(f"   ml train      - Train your model", fg="white")
     click.secho(f"   ml serve      - Serve your model as an API", fg="white")
     click.secho(f"   ml predict    - Make predictions", fg="white")
     click.secho(f"   ml preprocess - Preprocess your data", fg="white")
     
-    logging.info("Current Working Directory: " + current_dir)
+    logging.info(f"Original directory: {original_dir}")
+    logging.info(f"Target directory: {target_directory}")
+    logging.info(f"Created new directory: {created_new_directory}")
