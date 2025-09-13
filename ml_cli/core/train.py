@@ -82,9 +82,9 @@ def train_model(data, config):
     generations = tpot_config.get('generations', 4)
 
     if task_type == "classification":
-        model = TPOTClassifier(generations=generations, verbosity=2, random_state=42, n_jobs=-1)
+        model = TPOTClassifier(generations=generations, random_state=42, n_jobs=-1)
     elif task_type == "regression":
-        model = TPOTRegressor(generations=generations, verbosity=2, random_state=42, n_jobs=-1)
+        model = TPOTRegressor(generations=generations, random_state=42, n_jobs=-1)
     else:
         logging.error("Unsupported task type.")
         raise ValueError("Unsupported task type.")

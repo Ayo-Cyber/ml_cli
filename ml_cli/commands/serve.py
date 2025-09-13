@@ -16,7 +16,6 @@ API Endpoints:
   GET  /            - Welcome message and model status
   GET  /health      - Health check
   GET  /model-info  - Information about loaded model and features  
-  GET  /sample-input - Get sample input format for predictions
   POST /predict     - Make predictions using the trained model
   POST /reload-model - Reload model after retraining
 """)
@@ -66,7 +65,6 @@ def serve(host, port, reload, config_file):
     click.secho(f"   - ReDoc: http://{host}:{port}/redoc", fg="blue")
     click.secho("\n🔍 Key endpoints:", fg="blue")
     click.secho(f"   - Model info: http://{host}:{port}/model-info", fg="blue")
-    click.secho(f"   - Sample input: http://{host}:{port}/sample-input", fg="blue")
     click.secho(f"   - Make predictions: POST http://{host}:{port}/predict", fg="blue")
     
     os.environ["ML_CLI_CONFIG"] = config_file

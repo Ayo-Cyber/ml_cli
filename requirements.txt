@@ -31,4 +31,6 @@ psycopg2-binary
 alembic
 greenlet
 pydantic-settings
+
 certifi
+pyarrow

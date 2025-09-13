@@ -1,1 +1,2 @@
 ml_cli
+tests

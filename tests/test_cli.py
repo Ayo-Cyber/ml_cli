@@ -99,7 +99,7 @@ def test_init_command():
                 f.write("feature1,feature2,target\n1,2,0\n3,4,1")
 
             # Use input to provide answers to prompts
-            result = runner.invoke(cli, ["init"], input=f"data.csv\nclassification\ntarget\n{tmpdir}/output\n4\n")
+            result = runner.invoke(cli, ["init"], input="data.csv\nclassification\ntarget\n{tmpdir}/output\n4\n".format(tmpdir=tmpdir))
             assert result.exit_code == 0
             assert os.path.exists("config.yaml")
 

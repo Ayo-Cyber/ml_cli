@@ -1,13 +1,12 @@
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel, create_model
-from typing import Optional, Dict, Any, Union, List
+from fastapi import FastAPI, HTTPException, Body
+from pydantic import create_model
+from typing import Any
 import os
 import json
 import logging
-import sys
 from pathlib import Path
 
 # Configure logging
@@ -19,9 +18,10 @@ app = FastAPI()
 pipeline = None
 feature_info = None
 PredictionPayload = None
+sample_input_for_docs = None
 
 def load_model(output_dir: str):
-    global pipeline, feature_info, PredictionPayload
+    global pipeline, feature_info, PredictionPayload, sample_input_for_docs
     try:
         pipeline_path = Path(output_dir) / "fitted_pipeline.pkl"
         feature_info_path = Path(output_dir) / "feature_info.json"
@@ -35,18 +35,20 @@ def load_model(output_dir: str):
             feature_info = json.load(f)
 
         # Create the dynamic Pydantic model
-        def create_pydantic_model(name, feature_info):
-            fields = {}
-            for feature, feature_type in feature_info['feature_types'].items():
-                if pd.api.types.is_integer_dtype(feature_type):
-                    fields[feature] = (int, ...)
-                elif pd.api.types.is_float_dtype(feature_type):
-                    fields[feature] = (float, ...)
-                else:
-                    fields[feature] = (str, ...)
-            return create_model(name, **fields)
-
-        PredictionPayload = create_pydantic_model("PredictionPayload", feature_info)
+        fields = {}
+        sample_input_for_docs = {}
+        for feature, feature_type in feature_info['feature_types'].items():
+            if pd.api.types.is_integer_dtype(feature_type):
+                fields[feature] = (int, ...)
+                sample_input_for_docs[feature] = 0
+            elif pd.api.types.is_float_dtype(feature_type):
+                fields[feature] = (float, ...)
+                sample_input_for_docs[feature] = 0.0
+            else:
+                fields[feature] = (str, ...)
+                sample_input_for_docs[feature] = "string"
+        
+        PredictionPayload = create_model("PredictionPayload", **fields)
         logging.info("Model loaded successfully.")
 
     except Exception as e:
@@ -67,16 +69,19 @@ def startup_event():
     load_model(output_dir)
 
 @app.post("/predict")
-def predict(payload: BaseModel):
+def predict(payload: PredictionPayload = Body(..., example=sample_input_for_docs)):
     """
     Make a prediction based on the input payload.
     """
-    if not pipeline or not feature_info or not PredictionPayload:
+    if not pipeline or not feature_info:
         raise HTTPException(status_code=503, detail="Model not loaded. Please train a model first.")
 
     try:
         # Convert the payload to a DataFrame
         df = pd.DataFrame([payload.dict()])
+
+        # Reorder columns to match training
+        df = df[feature_info['feature_names']]
 
         # Make a prediction
         prediction = pipeline.predict(df)
@@ -99,21 +104,6 @@ def model_info():
     if not feature_info:
         raise HTTPException(status_code=503, detail="Model not loaded. Please train a model first.")
     return feature_info
-
-@app.get("/sample-input")
-def sample_input():
-    if not feature_info:
-        raise HTTPException(status_code=503, detail="Model not loaded. Please train a model first.")
-
-    sample = {}
-    for feature, feature_type in feature_info['feature_types'].items():
-        if pd.api.types.is_integer_dtype(feature_type):
-            sample[feature] = 0
-        elif pd.api.types.is_float_dtype(feature_type):
-            sample[feature] = 0.0
-        else:
-            sample[feature] = "string"
-    return {"sample_input": sample}
 
 @app.post("/reload-model")
 def reload_model():

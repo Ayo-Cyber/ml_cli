@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: ml_cli
 Version: 0.1
 Summary: A brief description of your project
@@ -10,24 +10,50 @@ Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
 Requires-Python: >=3.9
 Description-Content-Type: text/markdown
-Requires-Dist: pandas
-Requires-Dist: click
-Requires-Dist: pyyaml
-Requires-Dist: questionary
-Requires-Dist: tqdm
-Requires-Dist: rich
-Requires-Dist: configparser
-Requires-Dist: python-dotenv
-Requires-Dist: requests
-Requires-Dist: pycaret
-Requires-Dist: numpy
-Requires-Dist: scikit-learn
-Requires-Dist: torch
-Requires-Dist: tpot
-Requires-Dist: matplotlib
-Requires-Dist: seaborn
+Requires-Dist: pandas==2.2.2
+Requires-Dist: click==8.1.7
+Requires-Dist: pyyaml==6.0.1
+Requires-Dist: questionary==2.0.1
+Requires-Dist: tqdm==4.66.4
+Requires-Dist: rich==13.7.1
+Requires-Dist: rich-click==1.8.2
+Requires-Dist: configparser==7.0.0
+Requires-Dist: python-dotenv==1.0.1
+Requires-Dist: requests==2.32.3
+Requires-Dist: pytest==8.3.2
+Requires-Dist: psutil
+Requires-Dist: fastapi==0.111.1
+Requires-Dist: uvicorn==0.30.1
+Requires-Dist: numpy==1.26.4
+Requires-Dist: scikit-learn==1.5.1
+Requires-Dist: joblib==1.4.2
+Requires-Dist: tpot==0.12.2
+Requires-Dist: matplotlib==3.9.1
+Requires-Dist: seaborn==0.13.2
+Requires-Dist: python-multipart
+Requires-Dist: gunicorn
+Requires-Dist: Jinja2
+Requires-Dist: itsdangerous
+Requires-Dist: python-jose
+Requires-Dist: passlib
+Requires-Dist: bcrypt
+Requires-Dist: SQLAlchemy
+Requires-Dist: psycopg2-binary
+Requires-Dist: alembic
+Requires-Dist: greenlet
+Requires-Dist: pydantic-settings
+Requires-Dist: certifi
+Requires-Dist: pyarrow
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
 
-```markdown
 # ML CLI Pipeline
 
 This project provides a command-line interface (CLI) for running a machine learning pipeline using the TPOT library. It facilitates the automation of the machine learning workflow, including data loading, preprocessing, model training, and exporting the best-performing model.
@@ -39,6 +65,9 @@ This project provides a command-line interface (CLI) for running a machine learn
 - Supports classification and regression tasks using TPOT.
 - Configurable through a YAML file.
 - Exports the optimized machine learning pipeline to a Python file.
+- **New:** Train the model separately using the `train` command.
+- **New:** Make predictions on new data using the `predict` command.
+- **New:** Serve the trained model as a REST API using the `serve` command.
 
 ## Requirements
 
@@ -100,6 +129,32 @@ ml run
 
 This command will check for the preprocessed CSV file and load it if found. If not found, it will use the raw data specified in the `config.yaml` file.
 
+### Train the model
+
+To train the model separately, use the `train` command:
+
+```bash
+ml train
+```
+
+### Make predictions
+
+To make predictions on new data, use the `predict` command:
+
+```bash
+ml predict --input-path /path/to/new_data.csv --output-path /path/to/predictions.csv --model-path /path/to/best_model_pipeline.py
+```
+
+### Serve the model
+
+To serve the trained model as a REST API, use the `serve` command:
+
+```bash
+ml serve
+```
+
+This will start a FastAPI server at `http://127.0.0.1:8000`.
+
 ## Error Handling
 
 If an error occurs during data loading or processing, you will be prompted to run the preprocessing command to prepare your data.
@@ -115,7 +170,7 @@ Contributions are welcome! Please feel free to submit a pull request or open an 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-```
+
 
 ### Markdown Notes:
 - Make sure to replace `yourusername/your-repo-name` with your actual GitHub repository URL.

@@ -12,7 +12,15 @@ ml_cli/commands/__init__.py
 ml_cli/commands/clean.py
 ml_cli/commands/eda.py
 ml_cli/commands/init.py
+ml_cli/commands/predict.py
 ml_cli/commands/preprocess.py
-ml_cli/commands/run.py
+ml_cli/commands/serve.py
+ml_cli/commands/train.py
+ml_cli/core/__init__.py
+ml_cli/core/data.py
+ml_cli/core/predict.py
+ml_cli/core/train.py
 ml_cli/utils/__init__.py
 ml_cli/utils/utils.py
+tests/__init__.py
+tests/test_cli.py
