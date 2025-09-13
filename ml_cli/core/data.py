@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 from pathlib import Path
 from ml_cli.utils.utils import log_artifact
+import ssl
 
 def load_data(config: dict) -> pd.DataFrame:
     """Load data from the specified path in the config."""
@@ -23,6 +24,8 @@ def load_data(config: dict) -> pd.DataFrame:
             raise ValueError("No data path specified in config. Use 'data_path' or 'path' key.")
 
     try:
+        # Create an unverified SSL context
+        ssl._create_default_https_context = ssl._create_unverified_context
         data = pd.read_csv(data_path)
         logging.info(f"Data loaded successfully from {data_path}. Shape: {data.shape}")
         return data
