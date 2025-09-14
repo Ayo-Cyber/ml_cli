@@ -98,7 +98,7 @@ def init(format, ssl_verify):
     original_dir = os.getcwd()
 
     # Determine the target directory based on user choice
-    target_directory = os.getcwd()
+    target_directory = get_target_directory()
 
     # Track if we created a new directory
     created_new_directory = target_directory != original_dir
