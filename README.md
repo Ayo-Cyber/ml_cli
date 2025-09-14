@@ -55,7 +55,7 @@ pip install click pandas scikit-learn tpot pyyaml
 
    ```yaml
    data:
-     data_path: 'path/to/your/raw_data.csv'  # Path to raw data file
+     path: 'path/to/your/raw_data.csv'  # Path to raw data file
      target_column: 'your_target_column'      # Name of the target column
    task:
      type: 'classification'                    # Task type: 'classification' or 'regression'
@@ -65,13 +65,7 @@ pip install click pandas scikit-learn tpot pyyaml
 
 ## Usage
 
-To run the ML pipeline, use the following command:
 
-```bash
-ml run
-```
-
-This command will check for the preprocessed CSV file and load it if found. If not found, it will use the raw data specified in the `config.yaml` file.
 
 ### Train the model
 

@@ -17,11 +17,13 @@ def load_data(config: dict) -> pd.DataFrame:
         log_artifact(str(preprocessed_csv_path))
     else:
         print("No preprocessed CSV found. Using unprocessed data.")
-        data_path = config['data']['data_path']
+        data_path = config['data'].get('data_path')
+        if not data_path:
+            raise ValueError("No data path specified in config. Use 'data_path' key.")
 
     try:
         data = pd.read_csv(data_path)
-        logging.info("Data loaded successfully.")
+        logging.info(f"Data loaded successfully from {data_path}. Shape: {data.shape}")
         return data
     except FileNotFoundError:
         logging.error(f"Data file not found at {data_path}")

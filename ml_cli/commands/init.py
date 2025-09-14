@@ -6,10 +6,11 @@ import sys
 import os
 import logging
 import time
-import io 
+import io
+import requests
 from ml_cli.utils.utils import (
     write_config,
-    should_prompt_target_column, 
+    should_prompt_target_column,
     is_readable_file,
     is_target_in_file,
     get_target_directory,
@@ -18,20 +19,8 @@ from ml_cli.utils.utils import (
 
 # Constants
 KEYBOARD_INTERRUPT_MESSAGE = "Operation cancelled by user."
-
-# ANSI escape codes for coloring text
-class ColorFormatter(logging.Formatter):
-    COLORS = {
-        'INFO': '\033[92m',   # Green
-        'WARNING': '\033[93m', # Yellow
-        'ERROR': '\033[91m',   # Red
-        'RESET': '\033[0m',    # Reset to default
-    }
-
-    def format(self, record):
-        color = self.COLORS.get(record.levelname, self.COLORS['RESET'])
-        message = super().format(record)
-        return f"{color}{message}{self.COLORS['RESET']}"
+LOCAL_DATA_DIR = ".ml_cli"
+LOCAL_DATA_FILENAME = "local_data.csv"
 
 # Configure logging without timestamps
 logging.basicConfig(
@@ -40,33 +29,90 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 
-# Change the default formatter to the color formatter
-for handler in logging.getLogger().handlers:
-    handler.setFormatter(ColorFormatter())
+def create_convenience_script(target_directory):
+    """Create a convenience script to help users navigate to the project directory."""
+    script_name = "activate.sh"
+    script_path = os.path.join(target_directory, script_name)
+    
+    script_content = f"""#!/bin/bash
+# Activate ML project environment
+# Usage: source {script_name}
+
+cd "{target_directory}"
+echo "✅ Activated ML project environment in: {target_directory}"
+echo "💡 You can now run commands like 'ml train', 'ml serve', etc."
+"""
+    
+    try:
+        with open(script_path, 'w') as f:
+            f.write(script_content)
+        os.chmod(script_path, 0o755)
+        log_artifact(script_path)
+        return script_path
+    except Exception as e:
+        logging.warning(f"Could not create convenience script: {e}")
+        return None
+
+def download_data(data_path, ssl_verify, target_directory):
+    """Download data from a URL and save it locally."""
+    if not data_path.startswith(('http://', 'https://')):
+        return data_path
+
+    click.secho(f"Downloading data from {data_path}...", fg="blue")
+    try:
+        response = requests.get(data_path, verify=ssl_verify, stream=True)
+        response.raise_for_status()
+
+        # Create local data directory
+        local_data_path = os.path.join(target_directory, LOCAL_DATA_DIR)
+        os.makedirs(local_data_path, exist_ok=True)
+
+        local_file_path = os.path.join(local_data_path, LOCAL_DATA_FILENAME)
+
+        with open(local_file_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        click.secho(f"Data downloaded and saved to {local_file_path}", fg="green")
+        return local_file_path
+    except requests.exceptions.RequestException as e:
+        click.secho(f"Error downloading data: {e}", fg='red')
+        sys.exit(1)
 
 @click.command(help="""Initialize a new configuration file (YAML or JSON).
 
 Usage examples:
   ml init
   ml init --format json
-""")
+"""
+)
 @click.option('--format', default='yaml', type=click.Choice(['yaml', 'json']), help='Format of the configuration file (yaml or json)')
 @click.option('--ssl-verify/--no-ssl-verify', default=True, help='Enable or disable SSL verification for URL data paths')
 def init(format, ssl_verify):
     """Initialize a new configuration file (YAML or JSON)"""
     click.secho("Initializing configuration...", fg="green")
 
-    
     start_time = time.time()  # Start timing
+
+    # Store the original working directory before any changes
+    original_dir = os.getcwd()
 
     # Determine the target directory based on user choice
     target_directory = get_target_directory()
 
-    data_path = click.prompt('Please enter the data directory path', type=str)
-    
+    # Track if we created a new directory
+    created_new_directory = target_directory != original_dir
+
+    data_path_input = click.prompt('Please enter the data directory path', type=str)
+    click.echo(f"DEBUG: data_path_input = {data_path_input}")
+
     # Log the data path input
-    logging.info(f"Data path provided: {data_path}")
-    
+    logging.info(f"Data path provided: {data_path_input}")
+
+    # Download data if it's a URL
+    data_path = download_data(data_path_input, ssl_verify, target_directory)
+    click.echo(f"DEBUG: data_path = {data_path}")
+
     # Check if the file path is readable, passing the SSL verification flag
     if not is_readable_file(data_path, ssl_verify=ssl_verify):
         click.secho("Error: The file does not exist, is not readable, or has an unsupported format. Please provide a valid CSV, TXT, or JSON file.", fg='red')
@@ -81,6 +127,7 @@ def init(format, ssl_verify):
             questionary.Choice(title="Clustering", value="clustering")
         ]
     ).ask(kbi_msg=KEYBOARD_INTERRUPT_MESSAGE)
+    click.echo(f"DEBUG: task_type = {task_type}")
 
     if task_type is None:
         sys.exit(1)
@@ -89,6 +136,7 @@ def init(format, ssl_verify):
     logging.info(f"Task type selected: {task_type}")
 
     target_column = click.prompt('Please enter the target variable column', type=str) if should_prompt_target_column(task_type) else None
+    click.echo(f"DEBUG: target_column = {target_column}")
 
     if target_column and not is_target_in_file(data_path, target_column, ssl_verify=ssl_verify):
         click.secho(f"Error: The target column '{target_column}' is not present in the data file.", fg='red')
@@ -96,7 +144,9 @@ def init(format, ssl_verify):
         sys.exit(1)
 
     output_dir = click.prompt('Please enter the output directory path', type=str, default='output')
+    click.echo(f"DEBUG: output_dir = {output_dir}")
     generations = click.prompt('Please enter the number of TPOT generations', type=int, default=4)
+    click.echo(f"DEBUG: generations = {generations}")
 
     config_data = {
         'data': {
@@ -120,9 +170,38 @@ def init(format, ssl_verify):
 
     # Log the generated configuration file as an artifact
     log_artifact(config_filename)
+    
+    # Create a convenience script for easy navigation
+    create_convenience_script(target_directory)
 
     end_time = time.time()  # End timing
     elapsed_time = end_time - start_time
     click.secho(f"Configuration file created at: {config_filename}", fg="green")
     logging.info(f"Configuration file created! (Time taken: {elapsed_time:.2f}s)")
-    logging.info("Current Working Directory: " + os.getcwd())
+    
+    # Get the current working directory
+    current_dir = os.getcwd()
+    
+    # Provide clear instructions based on whether we created a new directory
+    if created_new_directory:
+        activate_script_path = os.path.join(target_directory, 'activate.sh')
+        click.secho(f"\n✅ Project initialized in: {target_directory}", fg="green", bold=True)
+        click.secho(f"⚠️  Your terminal is still in: {original_dir}", fg="yellow")
+        click.secho(f"\n💡 To move to your project directory, run:", fg="yellow")
+        click.secho(f"   cd {target_directory}", fg="cyan", bold=True)
+        click.secho(f"   # OR source the activation script:", fg="blue")
+        click.secho(f"   source {activate_script_path}", fg="cyan")
+    else:
+        click.secho(f"\n✅ Project initialized in current directory!", fg="green", bold=True)
+        click.secho(f"💡 You can now run commands like 'ml train'.", fg="yellow")
+    
+    click.secho(f"\n📋 Available commands:", fg="blue")
+    click.secho(f"   ml eda       - Perform exploratory data analysis", fg="white")
+    click.secho(f"   ml train      - Train your model", fg="white")
+    click.secho(f"   ml serve      - Serve your model as an API", fg="white")
+    click.secho(f"   ml predict    - Make predictions", fg="white")
+    click.secho(f"   ml preprocess - Preprocess your data", fg="white")
+    
+    logging.info(f"Original directory: {original_dir}")
+    logging.info(f"Target directory: {target_directory}")
+    logging.info(f"Created new directory: {created_new_directory}")

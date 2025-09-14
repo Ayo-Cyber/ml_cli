@@ -7,25 +7,12 @@ import questionary
 import click
 import sys
 import logging
-import ssl
+import io
 
 
 # Constants for file extensions
 VALID_EXTENSIONS = ('.csv', '.txt', '.json')
 KEYBOARD_INTERRUPT_MESSAGE = "Operation cancelled by user."
-
-
-def configure_logging():
-    """Configure logging format and level."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(levelname)s - %(message)s',  # Removed timestamp
-        handlers=[logging.StreamHandler(sys.stdout)]
-    )
-    
-    # Change the default formatter to the color formatter
-    for handler in logging.getLogger().handlers:
-        handler.setFormatter(ColorFormatter())  # Assuming ColorFormatter is defined
 
 
 def write_config(config_data, format, config_filename):
@@ -79,9 +66,6 @@ def check_local_file_readability(data_path):
     return False
 
 
-# Ensure SSL verification is disabled globally if needed
-ssl._create_default_https_context = ssl._create_unverified_context
-
 def is_target_in_file(data_path, target_column, ssl_verify=True):
     """Check if the target column exists in the data file."""
     logging.info("Checking for target column in data.")
@@ -89,7 +73,9 @@ def is_target_in_file(data_path, target_column, ssl_verify=True):
     try:
         if data_path.startswith('http://') or data_path.startswith('https://'):
             # Fetch data from URL
-            df = pd.read_csv(data_path)  # Read directly as CSV
+            response = requests.get(data_path, verify=ssl_verify)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            df = pd.read_csv(io.StringIO(response.text))
         else:
             # Load data locally
             df = pd.read_csv(data_path)
@@ -160,51 +146,3 @@ def log_artifact(file_path):
     artifact_log_path = os.path.join(os.getcwd(), '.artifacts.log')
     with open(artifact_log_path, 'a') as log_file:
         log_file.write(file_path + '\n')
-
-
-def load_config(config_file='config.yaml'):
-    """Load configuration file to get the data path."""
-    try:
-        with open(config_file, 'r') as f:
-            config_data = yaml.safe_load(f)
-        data_path = config_data['data']['data_path']
-        return data_path
-    except Exception as e:
-        click.secho(f"Error reading configuration file: {e}", fg='red')
-        logging.error(f"Error reading configuration file: {e}")
-        return None
-
-def load_data(data_path):
-    """Load the dataset from a specified path."""
-    try:
-        df = pd.read_csv(data_path)
-        logging.info("Data loaded successfully for preprocessing.")
-        return df
-    except Exception as e:
-        click.secho(f"Error loading data for preprocessing: {e}", fg='red')
-        logging.error(f"Error loading data for preprocessing: {e}")
-        return None
-
-def encode_categorical_columns(df):
-    """One-hot encode categorical columns in the DataFrame."""
-    try:
-        object_cols = df.select_dtypes(include=['object']).columns
-        if len(object_cols) > 0:
-            df = pd.get_dummies(df, columns=object_cols, drop_first=True)
-            logging.info(f"One-hot encoded columns: {list(object_cols)}")
-        return df
-    except Exception as e:
-        click.secho(f"Error during one-hot encoding: {e}", fg='red')
-        logging.error(f"Error during one-hot encoding: {e}")
-        return None
-
-def save_preprocessed_data(df, file_path):
-    """Save the preprocessed DataFrame to a specified file path."""
-    try:
-        df.to_csv(file_path, index=False)
-        click.secho(f"Preprocessed data saved to {file_path}", fg="green")
-        logging.info(f"Preprocessed data saved at: {file_path}")
-        log_artifact(file_path)
-    except Exception as e:
-        click.secho(f"Error saving preprocessed data: {e}", fg='red')
-        logging.error(f"Error saving preprocessed data: {e}")
