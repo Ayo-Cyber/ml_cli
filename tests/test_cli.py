@@ -12,6 +12,7 @@ import tempfile
 import joblib
 import json
 import numpy as np
+from unittest.mock import patch
 
 def run_server(config_file):
     runner = CliRunner()
@@ -90,7 +91,16 @@ def test_serve_command():
             server_process.terminate()
             server_process.join()
 
-def test_init_command():
+@patch('ml_cli.commands.init.questionary.select')
+@patch('ml_cli.commands.init.questionary.confirm')
+def test_init_command(mock_confirm, mock_select):
+    # Configure the mocks to return predefined answers
+    mock_select.return_value.ask.side_effect = [
+        "current",          # For 'Where do you want to initialize the project?'
+        "classification"    # For 'Please select the task type:'
+    ]
+    mock_confirm.return_value.ask.return_value = True # For 'Did you mean X?'
+
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as tmpdir:
         with runner.isolated_filesystem(temp_dir=tmpdir):
@@ -99,7 +109,7 @@ def test_init_command():
                 f.write("feature1,feature2,target\n1,2,0\n3,4,1")
 
             # Use input to provide answers to prompts
-            result = runner.invoke(cli, ["init"], input="data.csv\nclassification\ntarget\n{tmpdir}/output\n4\n".format(tmpdir=tmpdir))
+            result = runner.invoke(cli, ["init"], input="data.csv\ntarget\n{tmpdir}/output\n4\n".format(tmpdir=tmpdir))
             assert result.exit_code == 0
             assert os.path.exists("config.yaml")
 

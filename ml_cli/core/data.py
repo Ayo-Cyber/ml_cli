@@ -12,11 +12,11 @@ def load_data(config: dict) -> pd.DataFrame:
     logging.info("Checking for preprocessed CSV file...")
 
     if preprocessed_csv_path.exists():
-        print(f"Preprocessed CSV found: {preprocessed_csv_path}. Using this file.")
+        logging.info(f"Preprocessed CSV found: {preprocessed_csv_path}. Using this file.")
         data_path = preprocessed_csv_path
         log_artifact(str(preprocessed_csv_path))
     else:
-        print("No preprocessed CSV found. Using unprocessed data.")
+        logging.info("No preprocessed CSV found. Using unprocessed data.")
         data_path = config['data'].get('data_path')
         if not data_path:
             raise ValueError("No data path specified in config. Use 'data_path' key.")
