@@ -6,6 +6,8 @@ import yaml
 import json
 from ml_cli.core.data import load_data
 from ml_cli.core.train import train_model
+from ml_cli.utils.exceptions import DataError, ConfigurationError
+from ml_cli.utils.utils import load_config
 
 @click.command(help="""Train the ML model based on the configuration file.
 
@@ -21,24 +23,8 @@ def train(config_file):
     click.secho("Training ML model...", fg="green")
 
     try:
-        # Check config file exists
-        if not os.path.exists(config_file):
-            click.secho(f"Error: Configuration file '{config_file}' not found.", fg='red')
-            logging.error("Configuration file not found.")
-            sys.exit(1)
-
-        # Load config (YAML or JSON)
-        try:
-            if config_file.endswith(".json"):
-                with open(config_file, "r") as f:
-                    config = json.load(f)
-            else:  # Default to YAML
-                with open(config_file, "r") as f:
-                    config = yaml.safe_load(f)
-        except Exception as e:
-            click.secho(f"Error reading configuration file: {e}", fg='red')
-            logging.error(f"Error reading configuration file: {e}")
-            sys.exit(1)
+        # Load config
+        config = load_config(config_file)
 
         # Load the data
         click.secho("Loading data...", fg="blue")
@@ -56,7 +42,7 @@ def train(config_file):
     except FileNotFoundError:
         click.secho("Error: Data file not found. Please check the data path in your config file.", fg='red')
         sys.exit(1)
-    except ValueError as e:
+    except (DataError, ConfigurationError) as e:
         click.secho(f"Error: {e}", fg='red')
         sys.exit(1)
     except Exception as e:

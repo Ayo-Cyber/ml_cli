@@ -98,8 +98,17 @@ def test_init_command():
             with open("data.csv", "w") as f:
                 f.write("feature1,feature2,target\n1,2,0\n3,4,1")
 
-            # Use input to provide answers to prompts
-            result = runner.invoke(cli, ["init"], input="data.csv\nclassification\ntarget\n{tmpdir}/output\n4\n".format(tmpdir=tmpdir))
+            input_str = (
+                "current\n"  # For get_target_directory()
+                "data.csv\n" # For data_path_input
+                "classification\n" # For task_type
+                "target\n"   # For target_column
+                f"{tmpdir}/output\n" # For output_dir
+                "4\n"        # For generations
+            )
+
+            result = runner.invoke(cli, ["init"], input=input_str)
+            print(result.output)
             assert result.exit_code == 0
             assert os.path.exists("config.yaml")
 
@@ -108,17 +117,21 @@ def test_eda_command():
     with tempfile.TemporaryDirectory() as tmpdir:
         with runner.isolated_filesystem(temp_dir=tmpdir):
             # Create a dummy config.yaml file
-            with open("config.yaml", "w") as f:
+            config_path = os.path.join(tmpdir, "config.yaml")
+            with open(config_path, "w") as f:
                 f.write("data:\n  data_path: data.csv")
+            with open(config_path, "r") as f:
+                print(f"--- Content of config.yaml: ---\n{f.read()}--- End of config.yaml ---")
 
             # Create a dummy data.csv file
             data = pd.DataFrame({
                 'feature1': range(10),
                 'feature2': range(10)
             })
-            data.to_csv("data.csv", index=False)
+            data.to_csv(os.path.join(tmpdir, "data.csv"), index=False)
 
-            result = runner.invoke(cli, ["eda"])
+            result = runner.invoke(cli, ["eda", "--config", config_path])
+            print(result.output)
             assert result.exit_code == 0
             assert os.path.exists("summary_statistics.csv")
             assert os.path.exists("eda_report.csv")

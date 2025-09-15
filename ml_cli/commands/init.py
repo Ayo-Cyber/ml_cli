@@ -8,6 +8,7 @@ import logging
 import time
 import io
 import requests
+from ml_cli.config.models import MLConfig, DataConfig, TaskConfig
 from ml_cli.utils.utils import (
     write_config,
     should_prompt_target_column,
@@ -148,25 +149,25 @@ def init(format, ssl_verify):
     generations = click.prompt('Please enter the number of TPOT generations', type=int, default=4)
     click.echo(f"DEBUG: generations = {generations}")
 
-    config_data = {
-        'data': {
-            'data_path': data_path,
-            'target_column': target_column,
-        },
-        'task': {
-            'type': task_type,
-        },
-        'output_dir': output_dir,
-        'tpot': {
-            'generations': generations
-        }
-    }
+    # Create Pydantic models from the collected data
+    try:
+        data_config = DataConfig(data_path=data_path, target_column=target_column)
+        task_config = TaskConfig(type=task_type)
+        ml_config = MLConfig(
+            data=data_config,
+            task=task_config,
+            output_dir=output_dir,
+            tpot={"generations": generations}
+        )
+    except Exception as e:
+        click.secho(f"Error creating configuration: {e}", fg='red')
+        sys.exit(1)
 
     # Prepare configuration filename and log the action
     config_filename = os.path.join(target_directory, f'config.{format}')
     logging.info(f"Writing configuration to {config_filename}")
 
-    write_config(config_data, format, config_filename)
+    write_config(ml_config.model_dump(), format, config_filename)
 
     # Log the generated configuration file as an artifact
     log_artifact(config_filename)

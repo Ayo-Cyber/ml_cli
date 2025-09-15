@@ -8,6 +8,8 @@ from tpot import TPOTClassifier, TPOTRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from ml_cli.utils.utils import log_artifact
+from ml_cli.utils.exceptions import ConfigurationError
+from ml_cli.config.models import MLConfig
 
 # Suppress the torch warning from TPOT
 warnings.filterwarnings("ignore", message="Warning: optional dependency `torch` is not available.*")
@@ -53,10 +55,10 @@ def preprocess_categorical_data(data, target_column):
     
     return data_copy
 
-def train_model(data, config):
+def train_model(data: pd.DataFrame, config: MLConfig):
     """Train the model using TPOT."""
     try:
-        target_column = config['data']['target_column']
+        target_column = config.data.target_column
         
         # Preprocess categorical variables automatically
         data_processed = preprocess_categorical_data(data, target_column)
@@ -70,30 +72,30 @@ def train_model(data, config):
             'feature_names': X.columns.tolist(),
             'feature_types': X.dtypes.astype(str).to_dict(),
             'target_column': target_column,
-            'task_type': config['task']['type']
+            'task_type': config.task.type
         }
         
     except Exception as e:
         logging.error(f"Error processing data: {e}")
         raise
 
-    task_type = config['task']['type']
-    tpot_config = config.get('tpot', {})
+    task_type = config.task.type
+    tpot_config = config.tpot
     generations = tpot_config.get('generations', 4)
 
     if task_type == "classification":
-        model = TPOTClassifier(generations=generations, random_state=42, n_jobs=-1)
+        model = TPOTClassifier(generations=generations, random_state=42, n_jobs=-1, verbosity=0)
     elif task_type == "regression":
-        model = TPOTRegressor(generations=generations, random_state=42, n_jobs=-1)
+        model = TPOTRegressor(generations=generations, random_state=42, n_jobs=-1, verbosity=0)
     else:
         logging.error("Unsupported task type.")
-        raise ValueError("Unsupported task type.")
+        raise ConfigurationError("Unsupported task type.")
 
     try:
         logging.info("Starting TPOT optimization...")
         model.fit(X_train, y_train)
 
-        output_dir = config.get('output_dir', 'output')
+        output_dir = config.output_dir
         os.makedirs(output_dir, exist_ok=True)
         
         # Export the model pipeline

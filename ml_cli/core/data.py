@@ -3,10 +3,12 @@ import logging
 import pandas as pd
 from pathlib import Path
 from ml_cli.utils.utils import log_artifact
+from ml_cli.utils.exceptions import DataError
+from ml_cli.config.models import MLConfig
 
-def load_data(config: dict) -> pd.DataFrame:
+def load_data(config: MLConfig) -> pd.DataFrame:
     """Load data from the specified path in the config."""
-    output_dir = Path(config.get('output_dir', 'output'))
+    output_dir = Path(config.output_dir)
     preprocessed_csv_path = output_dir / 'preprocessed_data.csv'
 
     logging.info("Checking for preprocessed CSV file...")
@@ -17,9 +19,9 @@ def load_data(config: dict) -> pd.DataFrame:
         log_artifact(str(preprocessed_csv_path))
     else:
         print("No preprocessed CSV found. Using unprocessed data.")
-        data_path = config['data'].get('data_path')
+        data_path = config.data.data_path
         if not data_path:
-            raise ValueError("No data path specified in config. Use 'data_path' key.")
+            raise DataError("No data path specified in config. Use 'data_path' key.")
 
     try:
         data = pd.read_csv(data_path)

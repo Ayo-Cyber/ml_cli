@@ -8,6 +8,8 @@ import click
 import sys
 import logging
 import io
+from typing import Optional
+from pydantic import ValidationError
 
 
 # Constants for file extensions
@@ -146,3 +148,36 @@ def log_artifact(file_path):
     artifact_log_path = os.path.join(os.getcwd(), '.artifacts.log')
     with open(artifact_log_path, 'a') as log_file:
         log_file.write(file_path + '\n')
+
+def load_config(config_file: Optional[str] = None) -> "MLConfig":
+    print(f"--- Inside load_config. config_file: {config_file} ---")
+    print(f"--- Inside load_config. Current working directory: {os.getcwd()} ---")
+    print(f"DEBUG (load_config): config_file = {config_file}")
+    print(f"DEBUG (load_config): os.path.exists(config_file) = {os.path.exists(config_file)}")
+
+    config_data = {}
+    if config_file:
+        try:
+            with open(config_file, "r") as f:
+                print(f"DEBUG (load_config): Successfully opened {config_file}")
+                if config_file.endswith(".json"):
+                    config_data = json.load(f)
+                else:
+                    config_data = yaml.safe_load(f)
+        except (FileNotFoundError, yaml.YAMLError, json.JSONDecodeError) as e:
+            click.secho(f"Warning: Could not load configuration from '{config_file}': {e}. Using default configuration.", fg='yellow')
+            logging.warning(f"Could not load configuration from '{config_file}': {e}. Using default configuration.")
+            config_file = None # Set to None to trigger default config
+
+    if not config_file: # If config_file was None initially or loading failed
+        logging.info("Using default configuration.")
+        return MLConfig(data={"data_path": ""}, task={"type": "classification"}) # Provide a minimal default config
+
+    try:
+        return MLConfig(**config_data)
+    except ValidationError as e:
+        click.secho(f"Error: Configuration validation failed in '{config_file}':", fg='red')
+        for error in e.errors():
+            click.secho(f"  - {error['loc'][0]}: {error['msg']}", fg='yellow')
+        sys.exit(1)
+

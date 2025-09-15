@@ -4,6 +4,7 @@ import yaml
 import logging
 import click
 import json
+from ml_cli.utils.exceptions import ConfigurationError, DataError
 
 
 def log_artifact(file_path):
@@ -18,10 +19,8 @@ def load_data(data_path):
         df = pd.read_csv(data_path)
         logging.info("Data loaded successfully for preprocessing.")
         return df
-    except Exception as e:
-        click.secho(f"Error loading data for preprocessing: {e}", fg='red')
-        logging.error(f"Error loading data for preprocessing: {e}")
-        return None
+    except (FileNotFoundError, pd.errors.EmptyDataError) as e:
+        raise DataError(f"Error loading data for preprocessing: {e}")
 
 def encode_categorical_columns(df):
     """One-hot encode categorical columns in the DataFrame."""
@@ -32,9 +31,7 @@ def encode_categorical_columns(df):
             logging.info(f"One-hot encoded columns: {list(object_cols)}")
         return df
     except Exception as e:
-        click.secho(f"Error during one-hot encoding: {e}", fg='red')
-        logging.error(f"Error during one-hot encoding: {e}")
-        return None
+        raise DataError(f"Error during one-hot encoding: {e}")
 
 def save_preprocessed_data(df, file_path):
     """Save the preprocessed DataFrame to a specified file path."""
@@ -44,8 +41,7 @@ def save_preprocessed_data(df, file_path):
         logging.info(f"Preprocessed data saved at: {file_path}")
         log_artifact(file_path)
     except Exception as e:
-        click.secho(f"Error saving preprocessed data: {e}", fg='red')
-        logging.error(f"Error saving preprocessed data: {e}")
+        raise DataError(f"Error saving preprocessed data: {e}")
 
 @click.command(help="""Preprocess the dataset specified in the configuration file. 
     
@@ -59,37 +55,36 @@ def preprocess(config_file):
     """Preprocess the dataset to handle non-numeric columns using OneHotEncoder."""
     click.secho("Preprocessing data...", fg="green")
 
-    # Load config (JSON or YAML)
     try:
-        if config_file.endswith(".json"):
-            with open(config_file, 'r') as f:
-                config_data = json.load(f)
-        else:  # default to YAML
-            with open(config_file, 'r') as f:
-                config_data = yaml.safe_load(f)
+        # Load config (JSON or YAML)
+        try:
+            if config_file.endswith(".json"):
+                with open(config_file, 'r') as f:
+                    config_data = json.load(f)
+            else:  # default to YAML
+                with open(config_file, 'r') as f:
+                    config_data = yaml.safe_load(f)
+        except (FileNotFoundError, yaml.YAMLError, json.JSONDecodeError) as e:
+            raise ConfigurationError(f"Error reading configuration file: {e}")
+
+        # Extract dataset path
+        data_path = config_data.get("data", {}).get("data_path")
+        if not data_path:
+            raise ConfigurationError("No data path specified in config file.")
+
+        # Load dataset
+        df = load_data(data_path)
+
+        # One-hot encode categorical columns
+        df = encode_categorical_columns(df)
+
+        # Save preprocessed data
+        output_dir = config_data.get('output_dir', 'output')
+        os.makedirs(output_dir, exist_ok=True)
+        preprocessed_file = os.path.join(output_dir, "preprocessed_data.csv")
+        save_preprocessed_data(df, preprocessed_file)
+
+    except (ConfigurationError, DataError) as e:
+        click.secho(f"Error: {e}", fg='red')
     except Exception as e:
-        click.secho(f"Error reading configuration file: {e}", fg='red')
-        logging.error(f"Error reading configuration file: {e}")
-        return
-
-    # Extract dataset path
-    data_path = config_data.get("data", {}).get("data_path")
-    if not data_path:
-        click.secho("No data path specified in config file.", fg='red')
-        return
-
-    # Load dataset
-    df = load_data(data_path)
-    if df is None:
-        return
-
-    # One-hot encode categorical columns
-    df = encode_categorical_columns(df)
-    if df is None:
-        return
-
-    # Save preprocessed data
-    output_dir = config_data.get('output_dir', 'output')
-    os.makedirs(output_dir, exist_ok=True)
-    preprocessed_file = os.path.join(output_dir, "preprocessed_data.csv")
-    save_preprocessed_data(df, preprocessed_file)
+        click.secho(f"An unexpected error occurred: {e}", fg='red')

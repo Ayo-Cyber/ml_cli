@@ -1,8 +1,12 @@
 import warnings
+import logging
 import rich_click as click
 
 # Suppress the torch warning from TPOT before any imports
 warnings.filterwarnings("ignore", message="Warning: optional dependency `torch` is not available.*")
+
+# Set higher log level for tpot
+logging.getLogger('tpot').setLevel(logging.WARNING)
 
 from ml_cli.commands.init import init 
 
