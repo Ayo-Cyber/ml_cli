@@ -8,6 +8,7 @@ import click
 import sys
 import logging
 import io
+import difflib
 
 
 # Constants for file extensions
@@ -83,10 +84,17 @@ def is_target_in_file(data_path, target_column, ssl_verify=True):
         # Check if target column exists
         if target_column in df.columns:
             logging.info(f"Target column '{target_column}' found in data.")
-            return True
-        else:
-            logging.warning(f"Target column '{target_column}' not found in data.")
-            return False
+            return True, target_column
+
+        suggested_column = suggest_column_name(target_column, df.columns)
+        if suggested_column:
+            confirm = questionary.confirm(f"Did you mean '{suggested_column}'?").ask()
+            if confirm:
+                logging.info(f"User accepted suggested column: '{suggested_column}'.")
+                return True, suggested_column
+        
+        logging.warning(f"Target column '{target_column}' not found in data. Did you mean '{suggested_column}'?")
+        return False, None
     
     except Exception as e:
         logging.error(f"Error reading file {data_path}: {e}")
@@ -146,3 +154,11 @@ def log_artifact(file_path):
     artifact_log_path = os.path.join(os.getcwd(), '.artifacts.log')
     with open(artifact_log_path, 'a') as log_file:
         log_file.write(file_path + '\n')
+
+def suggest_column_name(user_input, columns):
+    """
+    Suggest the closest column name from the list of columns.
+    Returns the best match or None if no close match is found.
+    """
+    matches = difflib.get_close_matches(user_input, columns, n=1, cutoff=0.6)
+    return matches[0] if matches else None

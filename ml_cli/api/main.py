@@ -9,8 +9,7 @@ import json
 import logging
 from pathlib import Path
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
+
 
 # Create the FastAPI app
 app = FastAPI()

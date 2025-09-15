@@ -122,19 +122,17 @@ def train_model(data, config):
         feature_info_path = os.path.join(output_dir, 'feature_info.json')
         with open(feature_info_path, 'w') as f:
             json.dump(feature_info, f, indent=2)
-        logging.info(f"Feature info saved to {feature_info_path}")
-        log_artifact(feature_info_path)
-
         score = model.score(X_test, y_test)
-        print(f"Model performance score: {score}")
-        
+        logging.info(f"Model performance score: {score}")
+
         # Save the test score in feature info for API reference
         feature_info['model_score'] = float(score)
         with open(feature_info_path, 'w') as f:
             json.dump(feature_info, f, indent=2)
-        print(f"Model performance score: {score}")
+        logging.info(f"Feature info saved to {feature_info_path}")
+        log_artifact(feature_info_path)
 
-        print("TPOT optimization completed.")
+        logging.info("TPOT optimization completed.")
         return model
     except Exception as e:
         logging.error(f"Error during model training or exporting: {e}")

@@ -14,7 +14,8 @@ from ml_cli.utils.utils import (
     is_readable_file,
     is_target_in_file,
     get_target_directory,
-    log_artifact
+    log_artifact,
+    suggest_column_name
 )
 
 # Constants
@@ -136,9 +137,20 @@ def init(format, ssl_verify):
     logging.info(f"Task type selected: {task_type}")
 
     target_column = click.prompt('Please enter the target variable column', type=str) if should_prompt_target_column(task_type) else None
-    click.echo(f"DEBUG: target_column = {target_column}")
 
-    if target_column and not is_target_in_file(data_path, target_column, ssl_verify=ssl_verify):
+    target_found, corrected_target_column = is_target_in_file(data_path, target_column, ssl_verify=ssl_verify)
+
+    if target_found:
+        target_column = corrected_target_column  # Update with corrected column name
+    else:
+        click.secho(f"Error: The target column '{target_column}' is not present in the data file.", fg='red')
+        logging.error(f"Target column '{target_column}' not found in the data file.")
+        sys.exit(1)
+
+    target_found, corrected_target_column = is_target_in_file(data_path, target_column, ssl_verify=ssl_verify)
+    if target_found:
+        target_column = corrected_target_column  # Update with corrected column name
+    else:
         click.secho(f"Error: The target column '{target_column}' is not present in the data file.", fg='red')
         logging.error(f"Target column '{target_column}' not found in the data file.")
         sys.exit(1)

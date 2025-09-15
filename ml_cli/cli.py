@@ -1,5 +1,13 @@
 import warnings
 import rich_click as click
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 # Suppress the torch warning from TPOT before any imports
 warnings.filterwarnings("ignore", message="Warning: optional dependency `torch` is not available.*")
