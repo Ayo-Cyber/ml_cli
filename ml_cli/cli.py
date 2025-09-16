@@ -23,7 +23,7 @@ from ml_cli.commands.serve import serve
 
 @click.group()
 def cli():
-    """Main CLI application entry point."""
+    """Main ML-CLI application entry point."""
     pass
 
 # Register the commands
