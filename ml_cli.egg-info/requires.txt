@@ -4,7 +4,6 @@ pyyaml==6.0.1
 questionary==2.0.1
 tqdm==4.66.4
 rich==13.7.1
-rich-click==1.8.2
 configparser==7.0.0
 python-dotenv==1.0.1
 requests==2.32.3
@@ -13,9 +12,9 @@ psutil
 fastapi==0.111.1
 uvicorn==0.30.1
 numpy==1.26.4
-scikit-learn==1.5.1
+scikit-learn==1.6
 joblib==1.4.2
-tpot==0.12.2
+tpot==1.1.0
 matplotlib==3.9.1
 seaborn==0.13.2
 python-multipart

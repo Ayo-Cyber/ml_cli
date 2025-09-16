@@ -1,6 +1,7 @@
 import warnings
-import rich_click as click
+import click
 import logging
+import sys # Keep sys for the check
 
 # Configure logging
 logging.basicConfig(
@@ -12,8 +13,7 @@ logging.basicConfig(
 # Suppress the torch warning from TPOT before any imports
 warnings.filterwarnings("ignore", message="Warning: optional dependency `torch` is not available.*")
 
-from ml_cli.commands.init import init 
-
+from ml_cli.commands.init import init
 from ml_cli.commands.eda import eda
 from ml_cli.commands.preprocess import preprocess
 from ml_cli.commands.clean import clean
@@ -23,12 +23,11 @@ from ml_cli.commands.serve import serve
 
 @click.group()
 def cli():
-    """Main CLI application entry point."""
+    """ML CLI for streamlined machine learning workflows."""
     pass
 
 # Register the commands
 cli.add_command(init)
-
 cli.add_command(eda)
 cli.add_command(preprocess)
 cli.add_command(clean)

@@ -3,27 +3,32 @@ import click
 import uvicorn
 import yaml
 
-@click.command(help="""Serve the ML model as a REST API using FastAPI.
+@click.command(help="""Deploys the trained ML model as a RESTful API using FastAPI.
+This command starts a local web server that exposes several endpoints for interacting with your model,
+including making predictions, checking model status, and retrieving model information.
+The API automatically loads the trained model and adapts to the features used during training,
+providing a flexible and easy-to-use interface.
 
-The API automatically loads the trained model and adapts to the features used during training.
-No need to manually configure features - it's completely flexible!
-
-Usage example:
-  ml serve
-  ml serve --port 8080 --no-reload
+Examples:
+  ml-cli serve
+  ml-cli serve --port 8080 --no-reload
+  ml-cli serve -h 0.0.0.0 -p 5000 --config my_config.json
 
 API Endpoints:
-  GET  /            - Welcome message and model status
-  GET  /health      - Health check
-  GET  /model-info  - Information about loaded model and features  
-  POST /predict     - Make predictions using the trained model
-  POST /reload-model - Reload model after retraining
+  GET  /            - Welcome message and basic API status.
+  GET  /health      - Health check endpoint to verify API availability.
+  GET  /model-info  - Provides detailed information about the currently loaded model and its expected features.
+  POST /predict     - Accepts new data and returns predictions from the trained model.
+  POST /reload-model - Reloads the model, useful after retraining without restarting the server.
 """)
-@click.option("--host", "-h", default="127.0.0.1", help="The host to bind the server to (default: 127.0.0.1).")
-@click.option("--port", "-p", default=8000, help="The port to bind the server to (default: 8000).")
-@click.option("--reload/--no-reload", default=True, help="Enable or disable auto-reloading of the server on code changes (default: True).")
+@click.option("--host", "-h", default="127.0.0.1",
+              help="The host IP address to bind the server to. Use '0.0.0.0' to make the server accessible externally. (Default: 127.0.0.1)")
+@click.option("--port", "-p", default=8000,
+              help="The port number on which the server will listen for incoming requests. (Default: 8000)")
+@click.option("--reload/--no-reload", default=True,
+              help="Enable or disable auto-reloading of the server when code changes are detected. Useful for development. (Default: True)")
 @click.option('--config', '-c', 'config_file', default="config.yaml",
-              help="Path to the configuration file (YAML or JSON).")
+              help='The absolute or relative path to the configuration file (config.yaml or config.json) used to determine the model output directory.')
 def serve(host, port, reload, config_file):
     """Serve the ML model as a REST API using FastAPI."""
     

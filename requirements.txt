@@ -4,7 +4,7 @@ pyyaml==6.0.1
 questionary==2.0.1
 tqdm==4.66.4
 rich==13.7.1
-rich-click==1.8.2
+
 configparser==7.0.0
 python-dotenv==1.0.1
 requests==2.32.3

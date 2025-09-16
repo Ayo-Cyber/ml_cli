@@ -5,7 +5,12 @@ from ml_cli.utils.utils import log_artifact
 
 
 
-@click.command(help="""Clean up all generated artifacts recorded in .artifacts.log.
+@click.command(help="""Cleans up all generated artifacts that were recorded in the '.artifacts.log' file.
+This command removes files and directories that were created during previous CLI operations (e.g., data preprocessing, model training)
+and logged for easy cleanup. It helps in maintaining a tidy project directory by removing intermediate or output files.
+
+Examples:
+  ml-cli clean
 """)
 def clean():
     """Clean up all generated artifacts recorded in .artifacts.log."""

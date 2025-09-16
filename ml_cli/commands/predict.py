@@ -4,14 +4,20 @@ import joblib
 import json
 import os
 
-@click.command(help="""Make predictions on new data using a trained model.
+@click.command(help="""Generates predictions on new, unseen data using a previously trained and saved machine learning model.
+This command loads the specified model and preprocessing pipeline, applies them to the input data,
+and saves the resulting predictions to a specified output file.
 
-Usage example:
-  ml predict -i data/new_samples.csv -o predictions.csv -m output
+Examples:
+  ml-cli predict -i data/new_samples.csv -o predictions.csv -m output
+  ml-cli predict --input-path test_data.csv --output-path results.csv --model-path trained_models/my_model
 """)
-@click.option('--input-path', '-i', type=click.Path(exists=True), required=True, help='Path to the input data for predictions (e.g., data/new_samples.csv).')
-@click.option('--output-path', '-o', type=click.Path(), required=True, help='Path to save the predictions (e.g., predictions.csv).')
-@click.option('--model-path', '-m', type=click.Path(exists=True), required=True, help='Path to the output directory where the trained model is saved.')
+@click.option('--input-path', '-i', type=click.Path(exists=True), required=True,
+              help='The absolute or relative path to the CSV file containing the new data for which predictions are to be made.')
+@click.option('--output-path', '-o', type=click.Path(), required=True,
+              help='The absolute or relative path where the generated predictions (as a CSV file) will be saved.')
+@click.option('--model-path', '-m', type=click.Path(exists=True), required=True,
+              help='The absolute or relative path to the directory containing the trained model (e.g., "fitted_pipeline.pkl") and feature information ("feature_info.json").')
 def predict(input_path, output_path, model_path):
     """Make predictions on new data using a trained model."""
     click.secho("Making predictions...", fg="green")

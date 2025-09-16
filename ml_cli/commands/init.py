@@ -80,15 +80,19 @@ def download_data(data_path, ssl_verify, target_directory):
         click.secho(f"Error downloading data: {e}", fg='red')
         sys.exit(1)
 
-@click.command(help="""Initialize a new configuration file (YAML or JSON).
+@click.command(help="""Initializes a new ML project by creating a configuration file (config.yaml or config.json).
+This command guides you through setting up your project's data path, target column, task type (classification, regression, clustering),
+output directory, and TPOT generations. It also creates an 'activate.sh' script for easy project navigation.
 
-Usage examples:
-  ml init
-  ml init --format json
-"""
-)
-@click.option('--format', default='yaml', type=click.Choice(['yaml', 'json']), help='Format of the configuration file (yaml or json)')
-@click.option('--ssl-verify/--no-ssl-verify', default=True, help='Enable or disable SSL verification for URL data paths')
+Examples:
+  ml-cli init
+  ml-cli init --format json
+  ml-cli init --no-ssl-verify # To disable SSL verification for data downloaded from URLs
+""")
+@click.option('--format', default='yaml', type=click.Choice(['yaml', 'json']),
+              help='Specify the format of the configuration file to be created (yaml or json). Default is yaml.')
+@click.option('--ssl-verify/--no-ssl-verify', default=True,
+              help='Enable or disable SSL verification for data paths that are URLs. Default is enabled.')
 def init(format, ssl_verify):
     """Initialize a new configuration file (YAML or JSON)"""
     click.secho("Initializing configuration...", fg="green")
