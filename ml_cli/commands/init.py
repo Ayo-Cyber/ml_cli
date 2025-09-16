@@ -15,7 +15,8 @@ from ml_cli.utils.utils import (
     is_target_in_file,
     get_target_directory,
     log_artifact,
-    suggest_column_name
+    download_data,
+    create_convenience_script
 )
 
 # Constants
