@@ -50,17 +50,22 @@ def train(config_file):
         categorical_cols = data.select_dtypes(include=['object']).columns.tolist()
         if categorical_cols:
             click.secho(f"Found categorical columns: {categorical_cols}", fg="yellow")
+            logging.info(f"Found categorical columns: {categorical_cols}")
             click.secho("Automatically preprocessing categorical data for TPOT...", fg="blue")
+            logging.info("Automatically preprocessing categorical data for TPOT...")
 
         # Train the model
         train_model(data, config)
 
     except FileNotFoundError:
         click.secho("Error: Data file not found. Please check the data path in your config file.", fg='red')
+        logging.error("Error: Data file not found. Please check the data path in your config file.")
         sys.exit(1)
     except ValueError as e:
         click.secho(f"Error: {e}", fg='red')
+        logging.error(f"Error: {e}")
         sys.exit(1)
     except Exception as e:
         click.secho(f"An unexpected error occurred: {e}", fg='red')
+        logging.error(f"An unexpected error occurred: {e}")
         sys.exit(1)

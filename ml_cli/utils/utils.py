@@ -96,9 +96,18 @@ def is_target_in_file(data_path, target_column, ssl_verify=True):
         logging.warning(f"Target column '{target_column}' not found in data. Did you mean '{suggested_column}'?")
         return False, None
     
+    except FileNotFoundError:
+        logging.error(f"File not found at {data_path}")
+        return False, None
+    except requests.RequestException as e:
+        logging.error(f"Error fetching data from URL {data_path}: {e}")
+        return False, None
+    except pd.errors.ParserError:
+        logging.error(f"Error parsing the data file at {data_path}. Please check the file format.")
+        return False, None
     except Exception as e:
-        logging.error(f"Error reading file {data_path}: {e}")
-        return False
+        logging.error(f"An unexpected error occurred while reading file {data_path}: {e}")
+        return False, None
 
 
 def get_target_directory():
@@ -152,8 +161,13 @@ def validate_existing_directory(target_directory):
 def log_artifact(file_path):
     """Log the generated artifact file path to `.artifacts.log`."""
     artifact_log_path = os.path.join(os.getcwd(), '.artifacts.log')
-    with open(artifact_log_path, 'a') as log_file:
-        log_file.write(file_path + '\n')
+    try:
+        with open(artifact_log_path, 'a') as log_file:
+            log_file.write(file_path + '\n')
+    except IOError as e:
+        logging.warning(f"Could not write to artifact log file: {e}")
+
+
 
 def suggest_column_name(user_input, columns):
     """
@@ -211,4 +225,9 @@ def download_data(data_path, ssl_verify, target_directory):
         return local_file_path
     except requests.exceptions.RequestException as e:
         click.secho(f"Error downloading data: {e}", fg='red')
+        logging.error(f"Error downloading data: {e}")
+        sys.exit(1)
+    except IOError as e:
+        click.secho(f"Error saving downloaded data to {local_file_path}: {e}", fg='red')
+        logging.error(f"Error saving downloaded data to {local_file_path}: {e}")
         sys.exit(1)

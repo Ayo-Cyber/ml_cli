@@ -16,11 +16,26 @@ def load_data(data_path):
     """Load the dataset from a specified path."""
     try:
         df = pd.read_csv(data_path)
+        if df.empty:
+            click.secho("The dataset is empty. Nothing to preprocess.", fg='yellow')
+            return None
         logging.info("Data loaded successfully for preprocessing.")
         return df
+    except FileNotFoundError:
+        click.secho(f"Error: Data file not found at '{data_path}'.", fg='red')
+        logging.error(f"Data file not found at '{data_path}'.")
+        return None
+    except pd.errors.EmptyDataError:
+        click.secho("The data file is empty.", fg='red')
+        logging.error("The data file is empty.")
+        return None
+    except pd.errors.ParserError:
+        click.secho("Error parsing the data file. Please check the file format.", fg='red')
+        logging.error("Error parsing the data file.")
+        return None
     except Exception as e:
-        click.secho(f"Error loading data for preprocessing: {e}", fg='red')
-        logging.error(f"Error loading data for preprocessing: {e}")
+        click.secho(f"An unexpected error occurred while loading data for preprocessing: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while loading data for preprocessing: {e}")
         return None
 
 def encode_categorical_columns(df):
@@ -31,9 +46,13 @@ def encode_categorical_columns(df):
             df = pd.get_dummies(df, columns=object_cols, drop_first=True)
             logging.info(f"One-hot encoded columns: {list(object_cols)}")
         return df
+    except AttributeError:
+        click.secho("Error: The dataset is not a valid DataFrame.", fg='red')
+        logging.error("The dataset is not a valid DataFrame.")
+        return None
     except Exception as e:
-        click.secho(f"Error during one-hot encoding: {e}", fg='red')
-        logging.error(f"Error during one-hot encoding: {e}")
+        click.secho(f"An unexpected error occurred during one-hot encoding: {e}", fg='red')
+        logging.error(f"An unexpected error occurred during one-hot encoding: {e}")
         return None
 
 def save_preprocessed_data(df, file_path):
@@ -43,9 +62,12 @@ def save_preprocessed_data(df, file_path):
         click.secho(f"Preprocessed data saved to {file_path}", fg="green")
         logging.info(f"Preprocessed data saved at: {file_path}")
         log_artifact(file_path)
+    except IOError as e:
+        click.secho(f"Error saving preprocessed data to {file_path}: {e}", fg='red')
+        logging.error(f"Error saving preprocessed data to {file_path}: {e}")
     except Exception as e:
-        click.secho(f"Error saving preprocessed data: {e}", fg='red')
-        logging.error(f"Error saving preprocessed data: {e}")
+        click.secho(f"An unexpected error occurred while saving preprocessed data: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while saving preprocessed data: {e}")
 
 @click.command(help="""Preprocesses the raw dataset as specified in the configuration file.
 This command performs necessary data transformations, such as one-hot encoding for categorical features,
@@ -69,9 +91,17 @@ def preprocess(config_file):
         else:  # default to YAML
             with open(config_file, 'r') as f:
                 config_data = yaml.safe_load(f)
+    except FileNotFoundError:
+        click.secho(f"Error: Configuration file '{config_file}' not found.", fg='red')
+        logging.error(f"Configuration file not found: {config_file}")
+        return
+    except (yaml.YAMLError, json.JSONDecodeError) as e:
+        click.secho(f"Error parsing configuration file: {e}", fg='red')
+        logging.error(f"Error parsing configuration file: {e}")
+        return
     except Exception as e:
-        click.secho(f"Error reading configuration file: {e}", fg='red')
-        logging.error(f"Error reading configuration file: {e}")
+        click.secho(f"An unexpected error occurred while reading the configuration file: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while reading the configuration file: {e}")
         return
 
     # Extract dataset path

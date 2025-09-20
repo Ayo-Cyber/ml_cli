@@ -40,6 +40,7 @@ def serve(host, port, reload, config_file):
                 output_dir = config.get('output_dir', 'output')
             except yaml.YAMLError as exc:
                 click.secho(f"Error reading config file: {exc}", fg="red")
+                logging.error(f"Error reading config file: {exc}")
 
     # Check if model files exist
     fitted_pipeline_path = os.path.join(output_dir, 'fitted_pipeline.pkl')
@@ -48,23 +49,28 @@ def serve(host, port, reload, config_file):
     
     if not os.path.exists(feature_info_path):
         click.secho("⚠️  Warning: No trained model found!", fg="yellow")
+        logging.warning("No trained model found!")
         click.secho("   Please run 'ml train' first to train a model.", fg="yellow")
         click.secho("   The API will start but predictions will not work until a model is available.\n", fg="yellow")
     elif os.path.exists(fitted_pipeline_path):
         click.secho("✅ Trained model found! API will be fully functional.", fg="green")
+        logging.info("Trained model found! API will be fully functional.")
         click.secho(f"   🤖 Fitted Pipeline: {fitted_pipeline_path}", fg="blue")
         click.secho(f"   📊 Features: {feature_info_path}", fg="blue")
     elif os.path.exists(pipeline_path):
         click.secho("✅ Exported pipeline found! API will be functional.", fg="green")
+        logging.info("Exported pipeline found! API will be functional.")
         click.secho(f"   📄 Pipeline: {pipeline_path}", fg="blue")
         click.secho(f"   📊 Features: {feature_info_path}", fg="blue")
         click.secho("   ℹ️  Note: Using exported pipeline (may be slower to load)", fg="yellow")
     else:
         click.secho("⚠️  Warning: No trained model found!", fg="yellow")
+        logging.warning("No trained model found!")
         click.secho("   Please run 'ml train' first to train a model.", fg="yellow")
         click.secho("   The API will start but predictions will not work until a model is available.\n", fg="yellow")
     
     click.secho(f"🚀 Starting ML Model API at http://{host}:{port}", fg="green")
+    logging.info(f"Starting ML Model API at http://{host}:{port}")
     click.secho("📚 API Documentation available at:", fg="blue")
     click.secho(f"   - Swagger UI: http://{host}:{port}/docs", fg="blue")
     click.secho(f"   - ReDoc: http://{host}:{port}/redoc", fg="blue")

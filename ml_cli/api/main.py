@@ -50,8 +50,10 @@ def load_model(output_dir: str):
         PredictionPayload = create_model("PredictionPayload", **fields)
         logging.info("Model loaded successfully.")
 
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Model files not found. Please train a model first.")
     except Exception as e:
-        logging.error(f"Error loading model: {e}")
+        raise HTTPException(status_code=500, detail=f"Error loading model: {e}")
 
 @app.on_event("startup")
 def startup_event():
@@ -64,7 +66,7 @@ def startup_event():
                 config = yaml.safe_load(f)
                 output_dir = config.get('output_dir', 'output')
             except yaml.YAMLError as exc:
-                logging.error(exc)
+                raise HTTPException(status_code=500, detail=f"Error loading config file: {exc}")
     load_model(output_dir)
 
 @app.post("/predict")
@@ -87,8 +89,10 @@ def predict(payload: PredictionPayload = Body(..., example=sample_input_for_docs
 
         # Return the prediction
         return {"prediction": prediction.tolist()}
+    except (ValueError, KeyError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid payload: {e}")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 @app.get("/")
 def root():
@@ -106,6 +110,11 @@ def model_info():
 
 @app.post("/reload-model")
 def reload_model():
+    global pipeline, feature_info, PredictionPayload, sample_input_for_docs
+    pipeline = None
+    feature_info = None
+    PredictionPayload = None
+    sample_input_for_docs = None
     startup_event()
     return {"message": "Model reloaded successfully."}
 

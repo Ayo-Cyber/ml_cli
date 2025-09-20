@@ -25,6 +25,10 @@ def predict(input_path, output_path, model_path):
     try:
         # Load the new data
         new_data = pd.read_csv(input_path)
+        if new_data.empty:
+            click.secho("The input data is empty. Nothing to predict.", fg='yellow')
+            logging.warning("The input data is empty. Nothing to predict.")
+            return
 
         # Load the pipeline and feature_info
         pipeline = joblib.load(os.path.join(model_path, "fitted_pipeline.pkl"))
@@ -38,11 +42,21 @@ def predict(input_path, output_path, model_path):
         predictions = pipeline.predict(new_data)
 
         # Save the predictions
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         pd.DataFrame(predictions, columns=['predictions']).to_csv(output_path, index=False)
 
         click.secho(f"Predictions saved to {output_path}", fg="green")
+        logging.info(f"Predictions saved to {output_path}")
 
     except FileNotFoundError as e:
-        click.secho(f"Error: {e}", fg='red')
+        click.secho(f"Error: Model file or feature info not found. {e}", fg='red')
+        logging.error(f"Error: Model file or feature info not found. {e}")
+    except (pd.errors.EmptyDataError, pd.errors.ParserError) as e:
+        click.secho(f"Error reading the input data: {e}", fg='red')
+        logging.error(f"Error reading the input data: {e}")
+    except KeyError as e:
+        click.secho(f"Error: One or more columns required by the model are not present in the input data. Missing columns: {e}", fg='red')
+        logging.error(f"Error: One or more columns required by the model are not present in the input data. Missing columns: {e}")
     except Exception as e:
         click.secho(f"An unexpected error occurred: {e}", fg='red')
+        logging.error(f"An unexpected error occurred: {e}")

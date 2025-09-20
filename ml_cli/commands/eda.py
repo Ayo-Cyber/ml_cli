@@ -16,9 +16,21 @@ def load_config(config_file='config.yaml'):
             config_data = yaml.safe_load(f)
         data_path = config_data['data']['data_path']
         return data_path
+    except FileNotFoundError:
+        click.secho(f"Error: Configuration file '{config_file}' not found.", fg='red')
+        logging.error(f"Configuration file not found: {config_file}")
+        return None
+    except yaml.YAMLError as e:
+        click.secho(f"Error parsing YAML file: {e}", fg='red')
+        logging.error(f"Error parsing YAML file: {e}")
+        return None
+    except KeyError:
+        click.secho("Error: 'data_path' not found in the configuration file.", fg='red')
+        logging.error("'data_path' not found in the configuration file.")
+        return None
     except Exception as e:
-        click.secho(f"Error reading configuration file: {e}", fg='red')
-        logging.error(f"Error reading configuration file: {e}")
+        click.secho(f"An unexpected error occurred while reading the configuration file: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while reading the configuration file: {e}")
         return None
 
 @click.command(help="""Performs exploratory data analysis (EDA) on the dataset.
@@ -52,12 +64,27 @@ def eda():
     # Load the dataset
     try:
         df = pd.read_csv(data_path)
+        if df.empty:
+            click.secho("The dataset is empty. Nothing to do.", fg='yellow')
+            logging.warning("The dataset is empty.")
+            return
         logging.info("Data loaded successfully.")
+    except FileNotFoundError:
+        click.secho(f"Error: Data file not found at '{data_path}'.", fg='red')
+        logging.error(f"Data file not found at '{data_path}'.")
+        click.secho("Please run the 'ml preprocess' command to prepare the data.", fg='yellow')
+        return
+    except pd.errors.EmptyDataError:
+        click.secho("The data file is empty.", fg='red')
+        logging.error("The data file is empty.")
+        return
+    except pd.errors.ParserError:
+        click.secho("Error parsing the data file. Please check the file format.", fg='red')
+        logging.error("Error parsing the data file.")
+        return
     except Exception as e:
-        click.secho(f"Error loading data: {e}", fg='red')
-        logging.error(f"Error loading data: {e}")
-        
-        # Remove any created artifacts
+        click.secho(f"An unexpected error occurred while loading the data: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while loading the data: {e}")
         _cleanup_artifacts(artifact_files)
         click.secho("Please run the 'ml preprocess' command to prepare the data.", fg='yellow')
         return
@@ -71,10 +98,14 @@ def eda():
         click.secho(f"Summary statistics saved to {summary_file}", fg="green")
         logging.info(f"Summary statistics generated and saved at: {summary_file}")
         log_artifact(summary_file)
+    except AttributeError:
+        click.secho("Error: The dataset is not a valid DataFrame.", fg='red')
+        logging.error("The dataset is not a valid DataFrame.")
+        _cleanup_artifacts(artifact_files)
+        return
     except Exception as e:
-        click.secho(f"Error generating summary statistics: {e}", fg='red')
-        logging.error(f"Error generating summary statistics: {e}")
-        
+        click.secho(f"An unexpected error occurred while generating summary statistics: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while generating summary statistics: {e}")
         _cleanup_artifacts(artifact_files)
         click.secho("Please run the 'ml preprocess' command to prepare the data.", fg='yellow')
         return
@@ -94,10 +125,14 @@ def eda():
         click.secho(f"EDA report saved to {eda_report_file}", fg="green")
         logging.info(f"EDA report generated and saved at: {eda_report_file}")
         log_artifact(eda_report_file)
+    except KeyError as e:
+        click.secho(f"Error: A column was not found during EDA report generation: {e}", fg='red')
+        logging.error(f"KeyError during EDA report generation: {e}")
+        _cleanup_artifacts(artifact_files)
+        return
     except Exception as e:
-        click.secho(f"Error generating EDA report: {e}", fg='red')
-        logging.error(f"Error generating EDA report: {e}")
-        
+        click.secho(f"An unexpected error occurred while generating the EDA report: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while generating the EDA report: {e}")
         _cleanup_artifacts(artifact_files)
         click.secho("Please run the 'ml preprocess' command to prepare the data.", fg='yellow')
         return
@@ -106,22 +141,32 @@ def eda():
     try:
         # Select only numeric columns for correlation
         numeric_df = df.select_dtypes(include=['number'])
-        correlation_matrix = numeric_df.corr()
         
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', cbar=True)
-        
-        plt.title('Correlation Matrix')
-        plt.savefig(correlation_matrix_file, bbox_inches='tight')
-        plt.close()  # Close the plot to avoid display in interactive environments
-        
-        click.secho(f"Correlation matrix heatmap saved to {correlation_matrix_file}", fg="green")
-        logging.info(f"Correlation matrix heatmap generated and saved at: {correlation_matrix_file}")
-        log_artifact(correlation_matrix_file)
-    except Exception as e:
+        if numeric_df.empty:
+            click.secho("No numeric columns found for correlation matrix.", fg='yellow')
+            logging.warning("No numeric columns found for correlation matrix.")
+            # Don't return here, as other artifacts might have been generated successfully
+        else:
+            correlation_matrix = numeric_df.corr()
+            
+            plt.figure(figsize=(10, 8))
+            sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', cbar=True)
+            
+            plt.title('Correlation Matrix')
+            plt.savefig(correlation_matrix_file, bbox_inches='tight')
+            plt.close()  # Close the plot to avoid display in interactive environments
+            
+            click.secho(f"Correlation matrix heatmap saved to {correlation_matrix_file}", fg="green")
+            logging.info(f"Correlation matrix heatmap generated and saved at: {correlation_matrix_file}")
+            log_artifact(correlation_matrix_file)
+
+    except TypeError as e:
         click.secho(f"Error generating correlation matrix: {e}", fg='red')
-        logging.error(f"Error generating correlation matrix: {e}")
-        
+        logging.error(f"TypeError during correlation matrix generation: {e}")
+        _cleanup_artifacts(artifact_files)
+    except Exception as e:
+        click.secho(f"An unexpected error occurred while generating the correlation matrix: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while generating the correlation matrix: {e}")
         _cleanup_artifacts(artifact_files)
         click.secho("Please run the 'ml preprocess' command to prepare the data.", fg='yellow')
         return
@@ -132,4 +177,3 @@ def _cleanup_artifacts(artifact_files):
         if os.path.exists(file_path):
             os.remove(file_path)
             logging.info(f"Removed artifact: {file_path}")
-            click.secho(f"Removed artifact: {file_path}", fg="yellow")
