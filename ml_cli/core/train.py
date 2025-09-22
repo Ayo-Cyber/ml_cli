@@ -5,6 +5,7 @@ import json
 import joblib
 import pandas as pd
 import click
+import click
 from tpot import TPOTClassifier, TPOTRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -60,6 +61,8 @@ def train_model(data, config):
         target_column = config['data']['target_column']
         if target_column not in data.columns:
             raise ValueError(f"Target column '{target_column}' not found in the dataset.")
+        if target_column not in data.columns:
+            raise ValueError(f"Target column '{target_column}' not found in the dataset.")
         
         # Preprocess categorical variables automatically
         data_processed = preprocess_categorical_data(data, target_column)
@@ -82,6 +85,12 @@ def train_model(data, config):
     except ValueError as e:
         logging.error(f"ValueError in data processing: {e}")
         raise
+    except KeyError as e:
+        logging.error(f"Missing key in config: {e}")
+        raise
+    except ValueError as e:
+        logging.error(f"ValueError in data processing: {e}")
+        raise
     except Exception as e:
         logging.error(f"An unexpected error occurred during data processing: {e}")
         raise
@@ -92,7 +101,9 @@ def train_model(data, config):
 
     if task_type == "classification":
         model = TPOTClassifier(generations=generations, random_state=42)
+        model = TPOTClassifier(generations=generations, random_state=42)
     elif task_type == "regression":
+        model = TPOTRegressor(generations=generations, random_state=42)
         model = TPOTRegressor(generations=generations, random_state=42)
     else:
         logging.error("Unsupported task type.")
@@ -107,9 +118,19 @@ def train_model(data, config):
         
         # Export the model pipeline
         model_file_path = os.path.join(output_dir, 'best_model_pipeline.py')
-        model.export(model_file_path)
-        logging.info(f"Model pipeline exported to {model_file_path}")
-        log_artifact(model_file_path)
+        if hasattr(model, "export"):
+            try:
+                click.secho(f"Exporting best model pipeline to {model_file_path}...", fg="blue")
+                model.export(model_file_path)
+                logging.info(f"Model pipeline exported to {model_file_path}")
+                click.secho(f"Best model pipeline exported successfully to {model_file_path}", fg="green")
+                log_artifact(model_file_path)
+            except Exception as e:
+                logging.warning(f"Could not export model pipeline: {e}")
+                click.secho(f"Could not export model pipeline: {e}", fg="red")
+        else:
+            logging.warning("TPOTClassifier does not have an export method. Skipping export.")
+            click.secho("TPOTClassifier does not have an export method. Skipping export.", fg="yellow")
 
         # Extract and save the fitted pipeline separately for serving
         fitted_pipeline = model.fitted_pipeline_
@@ -129,7 +150,22 @@ def train_model(data, config):
                 json.dump(feature_info, f, indent=2)
             score = fitted_pipeline.score(X_test, y_test)
             logging.info(f"Model performance score: {score}")
+        try:
+            with open(feature_info_path, 'w') as f:
+                json.dump(feature_info, f, indent=2)
+            score = fitted_pipeline.score(X_test, y_test)
+            logging.info(f"Model performance score: {score}")
 
+            # Save the test score in feature info for API reference
+            feature_info['model_score'] = float(score)
+            with open(feature_info_path, 'w') as f:
+                json.dump(feature_info, f, indent=2)
+            logging.info(f"Feature info saved to {feature_info_path}")
+            log_artifact(feature_info_path)
+        except IOError as e:
+            logging.error(f"Error saving feature info to {feature_info_path}: {e}")
+        except Exception as e:
+            logging.error(f"An unexpected error occurred while saving feature info: {e}")
             # Save the test score in feature info for API reference
             feature_info['model_score'] = float(score)
             with open(feature_info_path, 'w') as f:
