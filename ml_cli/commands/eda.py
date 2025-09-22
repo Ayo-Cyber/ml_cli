@@ -6,32 +6,8 @@ import yaml
 import logging
 import click
 import matplotlib.font_manager as fm
-from ml_cli.utils.utils import log_artifact
+from ml_cli.utils.utils import log_artifact, load_config
 
-
-def load_config(config_file='config.yaml'):
-    """Load configuration file to get the data path."""
-    try:
-        with open(config_file, 'r') as f:
-            config_data = yaml.safe_load(f)
-        data_path = config_data['data']['data_path']
-        return data_path
-    except FileNotFoundError:
-        click.secho(f"Error: Configuration file '{config_file}' not found.", fg='red')
-        logging.error(f"Configuration file not found: {config_file}")
-        return None
-    except yaml.YAMLError as e:
-        click.secho(f"Error parsing YAML file: {e}", fg='red')
-        logging.error(f"Error parsing YAML file: {e}")
-        return None
-    except KeyError:
-        click.secho("Error: 'data_path' not found in the configuration file.", fg='red')
-        logging.error("'data_path' not found in the configuration file.")
-        return None
-    except Exception as e:
-        click.secho(f"An unexpected error occurred while reading the configuration file: {e}", fg='red')
-        logging.error(f"An unexpected error occurred while reading the configuration file: {e}")
-        return None
 
 @click.command(help="""Perform exploratory data analysis (EDA) on the dataset specified in the configuration file.
 """)

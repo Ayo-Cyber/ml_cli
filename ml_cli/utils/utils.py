@@ -340,3 +340,71 @@ def load_model(output_dir: str):
     except Exception as e:
         logging.error(f"Error loading model: {e}")
         raise HTTPException(status_code=500, detail=f"Error loading model: {e}")
+
+
+def load_data(data_path):
+    """Load the dataset from a specified path."""
+    try:
+        df = pd.read_csv(data_path)
+        if df.empty:
+            click.secho("The dataset is empty. Nothing to preprocess.", fg='yellow')
+            return None
+        logging.info("Data loaded successfully for preprocessing.")
+        return df
+    except FileNotFoundError:
+        click.secho(f"Error: Data file not found at '{data_path}'.", fg='red')
+        logging.error(f"Data file not found at '{data_path}'.")
+        return None
+    except pd.errors.EmptyDataError:
+        click.secho("The data file is empty.", fg='red')
+        logging.error("The data file is empty.")
+        return None
+    except pd.errors.ParserError:
+        click.secho("Error parsing the data file. Please check the file format.", fg='red')
+        logging.error("Error parsing the data file.")
+        return None
+    except Exception as e:
+        click.secho(f"An unexpected error occurred while loading data for preprocessing: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while loading data for preprocessing: {e}")
+        return None
+
+def encode_categorical_columns(df):
+    """One-hot encode categorical columns in the DataFrame."""
+    try:
+        object_cols = df.select_dtypes(include=['object']).columns
+        if len(object_cols) > 0:
+            df = pd.get_dummies(df, columns=object_cols, drop_first=True)
+            logging.info(f"One-hot encoded columns: {list(object_cols)}")
+        return df
+    except AttributeError:
+        click.secho("Error: The dataset is not a valid DataFrame.", fg='red')
+        logging.error("The dataset is not a valid DataFrame.")
+        return None
+    except Exception as e:
+        click.secho(f"An unexpected error occurred during one-hot encoding: {e}", fg='red')
+        logging.error(f"An unexpected error occurred during one-hot encoding: {e}")
+        return None
+
+def load_config(config_file='config.yaml'):
+    """Load configuration file to get the data path."""
+    try:
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f)
+        data_path = config_data['data']['data_path']
+        return data_path
+    except FileNotFoundError:
+        click.secho(f"Error: Configuration file '{config_file}' not found.", fg='red')
+        logging.error(f"Configuration file not found: {config_file}")
+        return None
+    except yaml.YAMLError as e:
+        click.secho(f"Error parsing YAML file: {e}", fg='red')
+        logging.error(f"Error parsing YAML file: {e}")
+        return None
+    except KeyError:
+        click.secho("Error: 'data_path' not found in the configuration file.", fg='red')
+        logging.error("'data_path' not found in the configuration file.")
+        return None
+    except Exception as e:
+        click.secho(f"An unexpected error occurred while reading the configuration file: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while reading the configuration file: {e}")
+        return None

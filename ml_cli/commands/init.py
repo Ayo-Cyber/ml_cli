@@ -23,58 +23,6 @@ KEYBOARD_INTERRUPT_MESSAGE = "Operation cancelled by user."
 LOCAL_DATA_DIR = ".ml_cli"
 LOCAL_DATA_FILENAME = "local_data.csv"
 
-
-def create_convenience_script(target_directory):
-    """Create a convenience script to help users navigate to the project directory."""
-    script_name = "activate.sh"
-    script_path = os.path.join(target_directory, script_name)
-    
-    script_content = f"""#!/bin/bash
-# Activate ML project environment
-# Usage: source {script_name}
-
-cd "{target_directory}"
-echo "✅ Activated ML project environment in: {target_directory}"
-echo "💡 You can now run commands like 'ml train', 'ml serve', etc."
-"""
-    
-    try:
-        with open(script_path, 'w') as f:
-            f.write(script_content)
-        os.chmod(script_path, 0o755)
-        log_artifact(script_path)
-        return script_path
-    except Exception as e:
-        logging.warning(f"Could not create convenience script: {e}")
-        return None
-
-def download_data(data_path, ssl_verify, target_directory):
-    """Download data from a URL and save it locally."""
-    if not data_path.startswith(('http://', 'https://')):
-        return data_path
-
-    click.secho(f"Downloading data from {data_path}...", fg="blue")
-    try:
-        response = requests.get(data_path, verify=ssl_verify, stream=True)
-        response.raise_for_status()
-
-        # Create local data directory
-        local_data_path = os.path.join(target_directory, LOCAL_DATA_DIR)
-        os.makedirs(local_data_path, exist_ok=True)
-
-        local_file_path = os.path.join(local_data_path, LOCAL_DATA_FILENAME)
-
-        with open(local_file_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        
-        click.secho(f"Data downloaded and saved to {local_file_path}", fg="green")
-        return local_file_path
-    except requests.exceptions.RequestException as e:
-        click.secho(f"Error downloading data: {e}", fg='red')
-        logging.error(f"Error downloading data: {e}")
-        sys.exit(1)
-
 @click.command(help="""Initialize a new configuration file (YAML or JSON).
 
 Usage examples:
