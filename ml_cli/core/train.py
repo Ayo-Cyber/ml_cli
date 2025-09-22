@@ -150,20 +150,20 @@ def train_model(data, config):
                 json.dump(feature_info, f, indent=2)
             score = fitted_pipeline.score(X_test, y_test)
             logging.info(f"Model performance score: {score}")
-        try:
-            with open(feature_info_path, 'w') as f:
-                json.dump(feature_info, f, indent=2)
-            score = fitted_pipeline.score(X_test, y_test)
-            logging.info(f"Model performance score: {score}")
+            try:
+                with open(feature_info_path, 'w') as f:
+                    json.dump(feature_info, f, indent=2)
+                score = fitted_pipeline.score(X_test, y_test)
+                logging.info(f"Model performance score: {score}")
 
-            # Save the test score in feature info for API reference
-            feature_info['model_score'] = float(score)
-            with open(feature_info_path, 'w') as f:
-                json.dump(feature_info, f, indent=2)
-            logging.info(f"Feature info saved to {feature_info_path}")
-            log_artifact(feature_info_path)
-        except IOError as e:
-            logging.error(f"Error saving feature info to {feature_info_path}: {e}")
+                # Save the test score in feature info for API reference
+                feature_info['model_score'] = float(score)
+                with open(feature_info_path, 'w') as f:
+                    json.dump(feature_info, f, indent=2)
+                logging.info(f"Feature info saved to {feature_info_path}")
+                log_artifact(feature_info_path)
+            except IOError as e:
+                logging.error(f"Error saving feature info to {feature_info_path}: {e}")
         except Exception as e:
             logging.error(f"An unexpected error occurred while saving feature info: {e}")
             # Save the test score in feature info for API reference

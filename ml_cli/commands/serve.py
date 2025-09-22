@@ -2,6 +2,7 @@ import os
 import click
 import uvicorn
 import yaml
+import logging
 
 @click.command(help="""Deploys the trained ML model as a RESTful API using FastAPI.
 This command starts a local web server that exposes several endpoints for interacting with your model,
