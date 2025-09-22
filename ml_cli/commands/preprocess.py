@@ -69,13 +69,11 @@ def save_preprocessed_data(df, file_path):
         click.secho(f"An unexpected error occurred while saving preprocessed data: {e}", fg='red')
         logging.error(f"An unexpected error occurred while saving preprocessed data: {e}")
 
-@click.command(help="""Preprocesses the raw dataset as specified in the configuration file.
-This command performs necessary data transformations, such as one-hot encoding for categorical features,
-to prepare the data for machine learning model training. The processed data is saved to a new CSV file.
+@click.command(help="""Preprocess the dataset specified in the configuration file. 
 
-Examples:
-  ml-cli preprocess -c config.yaml
-  ml-cli preprocess --config config.json
+Usage example:
+  ml preprocess --config config.yaml
+  ml preprocess --config config.json
 """)
 @click.option('--config', '-c', 'config_file', default="config.yaml",
               help='The absolute or relative path to the configuration file (config.yaml or config.json) that specifies data paths and preprocessing steps.')

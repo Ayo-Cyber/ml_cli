@@ -7,15 +7,15 @@ import json
 from ml_cli.core.data import load_data
 from ml_cli.core.train import train_model
 
-@click.command(help="""Initiates the training process for a machine learning model based on the specifications
-provided in the configuration file. This command handles data loading, preprocessing (if necessary),
-model selection (using TPOT), and saves the best-trained model and related artifacts.
+@click.command(help="""Train the ML model based on the configuration file.
 
-Examples:
-  ml-cli train
-  ml-cli train -c config.json
-  ml-cli train --config custom_config.yaml
+Usage examples:
+  ml train                # uses config.yaml by default
+  ml train --config config.json
+  ml train --config custom_config.yaml
 """)
+@click.option('--config', '-c', 'config_file', default="config.yaml",
+              help="Path to the configuration file (YAML or JSON).")
 @click.option('--config', '-c', 'config_file', default="config.yaml",
               help='The absolute or relative path to the configuration file (config.yaml or config.json) that defines the training parameters, data paths, and model settings.')
 def train(config_file):

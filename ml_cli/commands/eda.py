@@ -33,18 +33,7 @@ def load_config(config_file='config.yaml'):
         logging.error(f"An unexpected error occurred while reading the configuration file: {e}")
         return None
 
-@click.command(help="""Performs exploratory data analysis (EDA) on the dataset.
-This command generates summary statistics, checks for missing values and data types,
-and creates a correlation matrix heatmap. The results are saved as CSV and PNG files
-in the current working directory. It relies on the 'data_path' specified in 'config.yaml'.
-
-Outputs:
-  - summary_statistics.csv: Basic statistical summary of the dataset.
-  - eda_report.csv: Report on missing values and data types per feature.
-  - correlation_matrix.png: Heatmap visualizing the correlation between numerical features.
-
-Examples:
-  ml-cli eda
+@click.command(help="""Perform exploratory data analysis (EDA) on the dataset specified in the configuration file.
 """)
 def eda():
     """Perform exploratory data analysis on the dataset."""

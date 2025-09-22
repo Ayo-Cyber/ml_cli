@@ -75,15 +75,13 @@ def download_data(data_path, ssl_verify, target_directory):
         logging.error(f"Error downloading data: {e}")
         sys.exit(1)
 
-@click.command(help="""Initializes a new ML project by creating a configuration file (config.yaml or config.json).
-This command guides you through setting up your project's data path, target column, task type (classification, regression, clustering),
-output directory, and TPOT generations. It also creates an 'activate.sh' script for easy project navigation.
+@click.command(help="""Initialize a new configuration file (YAML or JSON).
 
-Examples:
-  ml-cli init
-  ml-cli init --format json
-  ml-cli init --no-ssl-verify # To disable SSL verification for data downloaded from URLs
-""")
+Usage examples:
+  ml init
+  ml init --format json
+"""
+)
 @click.option('--format', default='yaml', type=click.Choice(['yaml', 'json']),
               help='Specify the format of the configuration file to be created (yaml or json). Default is yaml.')
 @click.option('--ssl-verify/--no-ssl-verify', default=True,

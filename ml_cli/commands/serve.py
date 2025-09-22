@@ -4,23 +4,21 @@ import uvicorn
 import yaml
 import logging
 
-@click.command(help="""Deploys the trained ML model as a RESTful API using FastAPI.
-This command starts a local web server that exposes several endpoints for interacting with your model,
-including making predictions, checking model status, and retrieving model information.
-The API automatically loads the trained model and adapts to the features used during training,
-providing a flexible and easy-to-use interface.
+@click.command(help="""Serve the ML model as a REST API using FastAPI.
 
-Examples:
-  ml-cli serve
-  ml-cli serve --port 8080 --no-reload
-  ml-cli serve -h 0.0.0.0 -p 5000 --config my_config.json
+The API automatically loads the trained model and adapts to the features used during training.
+No need to manually configure features - it's completely flexible!
+
+Usage example:
+  ml serve
+  ml serve --port 8080 --no-reload
 
 API Endpoints:
-  GET  /            - Welcome message and basic API status.
-  GET  /health      - Health check endpoint to verify API availability.
-  GET  /model-info  - Provides detailed information about the currently loaded model and its expected features.
-  POST /predict     - Accepts new data and returns predictions from the trained model.
-  POST /reload-model - Reloads the model, useful after retraining without restarting the server.
+  GET  /            - Welcome message and model status
+  GET  /health      - Health check
+  GET  /model-info  - Information about loaded model and features  
+  POST /predict     - Make predictions using the trained model
+  POST /reload-model - Reload model after retraining
 """)
 @click.option("--host", "-h", default="127.0.0.1",
               help="The host IP address to bind the server to. Use '0.0.0.0' to make the server accessible externally. (Default: 127.0.0.1)")
