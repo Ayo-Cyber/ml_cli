@@ -7,6 +7,8 @@ import os
 import json
 import logging
 from pathlib import Path
+from fastapi.openapi.utils import get_openapi
+from ml_cli.utils.utils import generate_realistic_example_from_stats, load_model
 
 # Create the FastAPI app
 app = FastAPI(
@@ -20,111 +22,7 @@ feature_info = None
 PredictionPayload = None
 sample_input_for_docs = None
 
-def generate_realistic_example_from_stats(feature_info: Dict) -> Dict[str, Any]:
-    """Generate realistic examples based on feature statistics from the actual data"""
-    example = {}
-    
-    # Check if we have feature statistics
-    if 'feature_statistics' in feature_info:
-        stats = feature_info['feature_statistics']
-        for feature in feature_info.get('feature_names', []):
-            if feature in stats and isinstance(stats[feature], dict):
-                feature_stats = stats[feature]
-                
-                # Use mean if available, otherwise median, otherwise midpoint of min/max
-                if 'mean' in feature_stats:
-                    value = feature_stats['mean']
-                elif 'median' in feature_stats:
-                    value = feature_stats['median']
-                elif 'min' in feature_stats and 'max' in feature_stats:
-                    value = (feature_stats['min'] + feature_stats['max']) / 2
-                else:
-                    value = 1.0
-                
-                # Round to reasonable decimal places
-                if isinstance(value, float):
-                    example[feature] = round(value, 2)
-                else:
-                    example[feature] = value
-            else:
-                example[feature] = 1.0
-    else:
-        # Fallback if no statistics available
-        for feature in feature_info.get('feature_names', []):
-            example[feature] = 1.0
-    
-    return example
 
-def load_model(output_dir: str):
-    global pipeline, feature_info, PredictionPayload, sample_input_for_docs
-    try:
-        pipeline_path = Path(output_dir) / "fitted_pipeline.pkl"
-        feature_info_path = Path(output_dir) / "feature_info.json"
-
-        if not pipeline_path.exists() or not feature_info_path.exists():
-            logging.warning("Model files not found. API will start but predictions will not work.")
-            return
-
-        pipeline = joblib.load(pipeline_path)
-        with open(feature_info_path, 'r') as f:
-            feature_info = json.load(f)
-
-        # Debug: Print feature_info structure
-        logging.info(f"Feature info keys: {feature_info.keys()}")
-        logging.info(f"Feature names: {feature_info.get('feature_names', [])}")
-
-        # Generate realistic example from actual feature statistics
-        sample_input_for_docs = generate_realistic_example_from_stats(feature_info)
-        
-        # Create the dynamic Pydantic model
-        fields = {}
-        feature_names = feature_info.get('feature_names', [])
-        feature_types = feature_info.get('feature_types', {})
-        
-        for feature in feature_names:
-            # Default to float if type is not specified or unclear
-            feature_type = feature_types.get(feature)
-            
-            if feature_type:
-                # Handle different ways feature types might be stored
-                if isinstance(feature_type, str):
-                    if 'int' in feature_type.lower() or 'integer' in feature_type.lower():
-                        fields[feature] = (int, ...)
-                    elif 'float' in feature_type.lower() or 'number' in feature_type.lower():
-                        fields[feature] = (float, ...)
-                    else:
-                        fields[feature] = (str, ...)
-                else:
-                    # Handle pandas dtype objects
-                    try:
-                        if pd.api.types.is_integer_dtype(feature_type):
-                            fields[feature] = (int, ...)
-                        elif pd.api.types.is_float_dtype(feature_type):
-                            fields[feature] = (float, ...)
-                        else:
-                            fields[feature] = (str, ...)
-                    except:
-                        # Fallback to float for numeric features
-                        fields[feature] = (float, ...)
-            else:
-                # Default to float for all features if type info is missing
-                fields[feature] = (float, ...)
-        
-        # Debug: Print fields being created
-        logging.info(f"Creating Pydantic model with fields: {list(fields.keys())}")
-        logging.info(f"Generated example: {sample_input_for_docs}")
-        
-        if fields:
-            PredictionPayload = create_model("PredictionPayload", **fields)
-            logging.info(f"Model loaded successfully with {len(fields)} features.")
-        else:
-            logging.error("No fields created for Pydantic model")
-
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="Model files not found. Please train a model first.")
-    except Exception as e:
-        logging.error(f"Error loading model: {e}")
-        raise HTTPException(status_code=500, detail=f"Error loading model: {e}")
 
 @app.on_event("startup")
 def startup_event():
@@ -339,7 +237,6 @@ def reload_model():
 @app.get("/openapi.json", include_in_schema=False)
 def custom_openapi():
     """Custom OpenAPI schema with dynamic examples"""
-    from fastapi.openapi.utils import get_openapi
     
     if app.openapi_schema:
         return app.openapi_schema
