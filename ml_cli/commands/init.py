@@ -143,15 +143,6 @@ def init(format, ssl_verify):
         target_column = corrected_target_column  # Update with corrected column name
     else:
         click.secho(f"Error: The target column '{target_column}' is not present in the data file.", fg='red')
-        logging.error(f"Target column '{target_column}' not found in the data file.")
-        sys.exit(1)
-
-    target_found, corrected_target_column = is_target_in_file(data_path, target_column, ssl_verify=ssl_verify)
-    if target_found:
-        target_column = corrected_target_column  # Update with corrected column name
-    else:
-        click.secho(f"Error: The target column '{target_column}' is not present in the data file.", fg='red')
-        logging.error(f"Target column '{target_column}' not found in the data file.")
         sys.exit(1)
 
     output_dir = click.prompt('Please enter the output directory path', type=str, default='output')

@@ -107,19 +107,9 @@ def train_model(data, config):
         
         # Export the model pipeline
         model_file_path = os.path.join(output_dir, 'best_model_pipeline.py')
-        if hasattr(model, "export"):
-            try:
-                click.secho(f"Exporting best model pipeline to {model_file_path}...", fg="blue")
-                model.export(model_file_path)
-                logging.info(f"Model pipeline exported to {model_file_path}")
-                click.secho(f"Best model pipeline exported successfully to {model_file_path}", fg="green")
-                log_artifact(model_file_path)
-            except Exception as e:
-                logging.warning(f"Could not export model pipeline: {e}")
-                click.secho(f"Could not export model pipeline: {e}", fg="red")
-        else:
-            logging.warning("TPOTClassifier does not have an export method. Skipping export.")
-            click.secho("TPOTClassifier does not have an export method. Skipping export.", fg="yellow")
+        model.export(model_file_path)
+        logging.info(f"Model pipeline exported to {model_file_path}")
+        log_artifact(model_file_path)
 
         # Extract and save the fitted pipeline separately for serving
         fitted_pipeline = model.fitted_pipeline_

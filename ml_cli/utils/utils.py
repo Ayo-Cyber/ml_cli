@@ -14,6 +14,9 @@ import difflib
 # Constants for file extensions
 VALID_EXTENSIONS = ('.csv', '.txt', '.json')
 KEYBOARD_INTERRUPT_MESSAGE = "Operation cancelled by user."
+# Python
+LOCAL_DATA_DIR = "data"
+LOCAL_DATA_FILENAME = "data.csv"
 
 
 def write_config(config_data, format, config_filename):

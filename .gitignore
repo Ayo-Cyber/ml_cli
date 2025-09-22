@@ -5,3 +5,5 @@ SERVING_GUIDE.md
 QUICK_START.md
 acme/
 heart.csv
+acme
+.pytest_cache/
