@@ -1,5 +1,6 @@
 import os
 import json
+from pathlib import Path
 import yaml
 import pandas as pd
 import requests
@@ -173,7 +174,6 @@ def log_artifact(file_path):
         logging.warning(f"Could not write to artifact log file: {e}")
 
 
-
 def suggest_column_name(user_input, columns):
     """
     Suggest the closest column name from the list of columns.
@@ -230,14 +230,12 @@ def download_data(data_path, ssl_verify, target_directory):
         return local_file_path
     except requests.exceptions.RequestException as e:
         click.secho(f"Error downloading data: {e}", fg='red')
-        logging.error(f"Error downloading data: {e}")
         sys.exit(1)
     except IOError as e:
         click.secho(f"Error saving downloaded data to {local_file_path}: {e}", fg='red')
-        logging.error(f"Error saving downloaded data to {local_file_path}: {e}")
         sys.exit(1)
 
-def generate_realistic_example_from_stats(feature_info: Dict) -> Dict[str, Any]:
+def generate_realistic_example_from_stats(feature_info: dict) -> dict[str, any]:
     """Generate realistic examples based on feature statistics from the actual data"""
     example = {}
     
