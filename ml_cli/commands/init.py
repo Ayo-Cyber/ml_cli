@@ -144,6 +144,19 @@ def init(format, ssl_verify):
     else:
         click.secho(f"Error: The target column '{target_column}' is not present in the data file.", fg='red')
         sys.exit(1)
+    
+    test_size = questionary.text(
+        "What percentage of data should be used for testing? (e.g 0.2 for 20%)",
+        default="0.2",
+    ).ask()
+
+    try:
+        test_size = float(test_size)
+        if not (0.1 <= test_size <= 0.5):
+            click.echo("⚠️  Warning: Test size should typically be between 0.1 and 0.5")
+    except ValueError:
+        test_size = 0.2
+        click.echo("Invalid input, using default test size of 0.2")
 
     output_dir = click.prompt('Please enter the output directory path', type=str, default='output')
     
@@ -161,6 +174,10 @@ def init(format, ssl_verify):
         'output_dir': output_dir,
         'tpot': {
             'generations': generations
+        },
+        'training': {
+            'test_size': test_size,
+            'random_state': 42
         }
     }
 

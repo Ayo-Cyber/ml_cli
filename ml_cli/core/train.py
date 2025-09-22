@@ -55,7 +55,7 @@ def preprocess_categorical_data(data, target_column):
     
     return data_copy
 
-def train_model(data, config):
+def train_model(data, config, test_size=None):
     """Train the model using TPOT."""
     try:
         target_column = config['data']['target_column']
@@ -64,12 +64,17 @@ def train_model(data, config):
         if target_column not in data.columns:
             raise ValueError(f"Target column '{target_column}' not found in the dataset.")
         
+        if test_size is None:
+            test_size = config.get('training', {}).get('test_size', {})
+
+        click.echo(f"📊 Using {test_size:.1%} of data for testing")
+      
         # Preprocess categorical variables automatically
         data_processed = preprocess_categorical_data(data, target_column)
         
         X = data_processed.drop(columns=[target_column])
         y = data_processed[target_column]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42, stratify=y if config['task']['type'] == 'classification' else None)
         
         # Save feature information for serving
         feature_info = {
