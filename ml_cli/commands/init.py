@@ -6,7 +6,6 @@ import sys
 import os
 import logging
 import time
-import io
 import requests
 from ml_cli.utils.utils import (
     write_config,
@@ -24,13 +23,6 @@ KEYBOARD_INTERRUPT_MESSAGE = "Operation cancelled by user."
 LOCAL_DATA_DIR = ".ml_cli"
 LOCAL_DATA_FILENAME = "local_data.csv"
 
-# Configure logging without timestamps
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s - %(message)s',  # Removed the timestamp
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
-
 @click.command(help="""Initialize a new configuration file (YAML or JSON).
 
 Usage examples:
@@ -38,8 +30,10 @@ Usage examples:
   ml init --format json
 """
 )
-@click.option('--format', default='yaml', type=click.Choice(['yaml', 'json']), help='Format of the configuration file (yaml or json)')
-@click.option('--ssl-verify/--no-ssl-verify', default=True, help='Enable or disable SSL verification for URL data paths')
+@click.option('--format', default='yaml', type=click.Choice(['yaml', 'json']),
+              help='Specify the format of the configuration file to be created (yaml or json). Default is yaml.')
+@click.option('--ssl-verify/--no-ssl-verify', default=True,
+              help='Enable or disable SSL verification for data paths that are URLs. Default is enabled.')
 def init(format, ssl_verify):
     """Initialize a new configuration file (YAML or JSON)"""
     click.secho("Initializing configuration...", fg="green")
@@ -56,14 +50,14 @@ def init(format, ssl_verify):
     created_new_directory = target_directory != original_dir
 
     data_path_input = click.prompt('Please enter the data directory path', type=str)
-    click.echo(f"DEBUG: data_path_input = {data_path_input}")
+    
 
     # Log the data path input
     logging.info(f"Data path provided: {data_path_input}")
 
     # Download data if it's a URL
     data_path = download_data(data_path_input, ssl_verify, target_directory)
-    click.echo(f"DEBUG: data_path = {data_path}")
+    
 
     # Check if the file path is readable, passing the SSL verification flag
     if not is_readable_file(data_path, ssl_verify=ssl_verify):
@@ -79,7 +73,7 @@ def init(format, ssl_verify):
             questionary.Choice(title="Clustering", value="clustering")
         ]
     ).ask(kbi_msg=KEYBOARD_INTERRUPT_MESSAGE)
-    click.echo(f"DEBUG: task_type = {task_type}")
+    
 
     if task_type is None:
         sys.exit(1)
@@ -96,11 +90,24 @@ def init(format, ssl_verify):
     else:
         click.secho(f"Error: The target column '{target_column}' is not present in the data file.", fg='red')
         sys.exit(1)
+    
+    test_size = questionary.text(
+        "What percentage of data should be used for testing? (e.g 0.2 for 20%)",
+        default="0.2",
+    ).ask()
+
+    try:
+        test_size = float(test_size)
+        if not (0.1 <= test_size <= 0.5):
+            click.echo("⚠️  Warning: Test size should typically be between 0.1 and 0.5")
+    except ValueError:
+        test_size = 0.2
+        click.echo("Invalid input, using default test size of 0.2")
 
     output_dir = click.prompt('Please enter the output directory path', type=str, default='output')
-    click.echo(f"DEBUG: output_dir = {output_dir}")
+    
     generations = click.prompt('Please enter the number of TPOT generations', type=int, default=4)
-    click.echo(f"DEBUG: generations = {generations}")
+    
 
     config_data = {
         'data': {
@@ -113,6 +120,10 @@ def init(format, ssl_verify):
         'output_dir': output_dir,
         'tpot': {
             'generations': generations
+        },
+        'training': {
+            'test_size': test_size,
+            'random_state': 42
         }
     }
 

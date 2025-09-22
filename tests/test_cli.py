@@ -64,7 +64,7 @@ def test_predict_command():
 
             result = runner.invoke(cli, ["predict", "-i", "input.csv", "-o", "output.csv", "-m", output_dir])
             assert result.exit_code == 0
-            assert os.path.exists("output.csv")
+            assert os.path.exists(os.path.join(tmpdir, "output.csv"))
 
 def test_serve_command():
     with tempfile.TemporaryDirectory() as tmpdir:

@@ -23,11 +23,19 @@ def load_data(config: dict) -> pd.DataFrame:
 
     try:
         data = pd.read_csv(data_path)
+        if data.empty:
+            logging.warning(f"The data file at {data_path} is empty.")
         logging.info(f"Data loaded successfully from {data_path}. Shape: {data.shape}")
         return data
     except FileNotFoundError:
         logging.error(f"Data file not found at {data_path}")
         raise
+    except pd.errors.EmptyDataError:
+        logging.error(f"The data file at {data_path} is empty.")
+        raise
+    except pd.errors.ParserError:
+        logging.error(f"Error parsing the data file at {data_path}. Please check the file format.")
+        raise
     except Exception as e:
-        logging.error(f"Error loading data: {e}")
+        logging.error(f"An unexpected error occurred while loading data from {data_path}: {e}")
         raise

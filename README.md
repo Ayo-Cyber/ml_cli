@@ -5,7 +5,9 @@
 
 ## 🚀 Overview
 
-The **ML CLI Pipeline** is a powerful command-line interface (CLI) tool designed to streamline and automate your machine learning workflow. Built with `click` and leveraging the robust `TPOT` library for automated machine learning (AutoML), this tool empowers data scientists and developers to effortlessly manage their ML projects from data preparation to model deployment.
+The ML CLI Pipeline is a command-line interface (CLI) tool for streamlined machine learning workflows. It helps manage ML projects from initialization to deployment.
+
+Built with `click` and leveraging the robust `TPOT` library for automated machine learning (AutoML), this tool empowers data scientists and developers to effortlessly manage their ML projects from data preparation to model deployment.
 
 With ML CLI, you can:
 - **Initialize** new ML projects with ease, setting up configurations for data, tasks, and output.

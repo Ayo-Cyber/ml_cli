@@ -1,5 +1,6 @@
 import os
 import json
+from pathlib import Path
 import yaml
 import pandas as pd
 import requests
@@ -9,6 +10,8 @@ import sys
 import logging
 import io
 import difflib
+from fastapi import FastAPI, HTTPException, Body
+from pydantic import create_model
 
 
 # Constants for file extensions
@@ -99,9 +102,18 @@ def is_target_in_file(data_path, target_column, ssl_verify=True):
         logging.warning(f"Target column '{target_column}' not found in data. Did you mean '{suggested_column}'?")
         return False, None
     
+    except FileNotFoundError:
+        logging.error(f"File not found at {data_path}")
+        return False, None
+    except requests.RequestException as e:
+        logging.error(f"Error fetching data from URL {data_path}: {e}")
+        return False, None
+    except pd.errors.ParserError:
+        logging.error(f"Error parsing the data file at {data_path}. Please check the file format.")
+        return False, None
     except Exception as e:
-        logging.error(f"Error reading file {data_path}: {e}")
-        return False
+        logging.error(f"An unexpected error occurred while reading file {data_path}: {e}")
+        return False, None
 
 
 def get_target_directory():
@@ -155,8 +167,12 @@ def validate_existing_directory(target_directory):
 def log_artifact(file_path):
     """Log the generated artifact file path to `.artifacts.log`."""
     artifact_log_path = os.path.join(os.getcwd(), '.artifacts.log')
-    with open(artifact_log_path, 'a') as log_file:
-        log_file.write(file_path + '\n')
+    try:
+        with open(artifact_log_path, 'a') as log_file:
+            log_file.write(file_path + '\n')
+    except IOError as e:
+        logging.warning(f"Could not write to artifact log file: {e}")
+
 
 def suggest_column_name(user_input, columns):
     """
@@ -215,3 +231,180 @@ def download_data(data_path, ssl_verify, target_directory):
     except requests.exceptions.RequestException as e:
         click.secho(f"Error downloading data: {e}", fg='red')
         sys.exit(1)
+    except IOError as e:
+        click.secho(f"Error saving downloaded data to {local_file_path}: {e}", fg='red')
+        sys.exit(1)
+
+def generate_realistic_example_from_stats(feature_info: dict) -> dict[str, any]:
+    """Generate realistic examples based on feature statistics from the actual data"""
+    example = {}
+    
+    # Check if we have feature statistics
+    if 'feature_statistics' in feature_info:
+        stats = feature_info['feature_statistics']
+        for feature in feature_info.get('feature_names', []):
+            if feature in stats and isinstance(stats[feature], dict):
+                feature_stats = stats[feature]
+                
+                # Use mean if available, otherwise median, otherwise midpoint of min/max
+                if 'mean' in feature_stats:
+                    value = feature_stats['mean']
+                elif 'median' in feature_stats:
+                    value = feature_stats['median']
+                elif 'min' in feature_stats and 'max' in feature_stats:
+                    value = (feature_stats['min'] + feature_stats['max']) / 2
+                else:
+                    value = 1.0
+                
+                # Round to reasonable decimal places
+                if isinstance(value, float):
+                    example[feature] = round(value, 2)
+                else:
+                    example[feature] = value
+            else:
+                example[feature] = 1.0
+    else:
+        # Fallback if no statistics available
+        for feature in feature_info.get('feature_names', []):
+            example[feature] = 1.0
+    
+    return example
+
+def load_model(output_dir: str):
+    global pipeline, feature_info, PredictionPayload, sample_input_for_docs
+    try:
+        pipeline_path = Path(output_dir) / "fitted_pipeline.pkl"
+        feature_info_path = Path(output_dir) / "feature_info.json"
+
+        if not pipeline_path.exists() or not feature_info_path.exists():
+            logging.warning("Model files not found. API will start but predictions will not work.")
+            return
+
+        pipeline = joblib.load(pipeline_path)
+        with open(feature_info_path, 'r') as f:
+            feature_info = json.load(f)
+
+        # Debug: Print feature_info structure
+        logging.info(f"Feature info keys: {feature_info.keys()}")
+        logging.info(f"Feature names: {feature_info.get('feature_names', [])}")
+
+        # Generate realistic example from actual feature statistics
+        sample_input_for_docs = generate_realistic_example_from_stats(feature_info)
+        
+        # Create the dynamic Pydantic model
+        fields = {}
+        feature_names = feature_info.get('feature_names', [])
+        feature_types = feature_info.get('feature_types', {})
+        
+        for feature in feature_names:
+            # Default to float if type is not specified or unclear
+            feature_type = feature_types.get(feature)
+            
+            if feature_type:
+                # Handle different ways feature types might be stored
+                if isinstance(feature_type, str):
+                    if 'int' in feature_type.lower() or 'integer' in feature_type.lower():
+                        fields[feature] = (int, ...)
+                    elif 'float' in feature_type.lower() or 'number' in feature_type.lower():
+                        fields[feature] = (float, ...)
+                    else:
+                        fields[feature] = (str, ...)
+                else:
+                    # Handle pandas dtype objects
+                    try:
+                        if pd.api.types.is_integer_dtype(feature_type):
+                            fields[feature] = (int, ...)
+                        elif pd.api.types.is_float_dtype(feature_type):
+                            fields[feature] = (float, ...)
+                        else:
+                            fields[feature] = (str, ...)
+                    except:
+                        # Fallback to float for numeric features
+                        fields[feature] = (float, ...)
+            else:
+                # Default to float for all features if type info is missing
+                fields[feature] = (float, ...)
+        
+        # Debug: Print fields being created
+        logging.info(f"Creating Pydantic model with fields: {list(fields.keys())}")
+        logging.info(f"Generated example: {sample_input_for_docs}")
+        
+        if fields:
+            PredictionPayload = create_model("PredictionPayload", **fields)
+            logging.info(f"Model loaded successfully with {len(fields)} features.")
+        else:
+            logging.error("No fields created for Pydantic model")
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Model files not found. Please train a model first.")
+    except Exception as e:
+        logging.error(f"Error loading model: {e}")
+        raise HTTPException(status_code=500, detail=f"Error loading model: {e}")
+
+
+def load_data(data_path):
+    """Load the dataset from a specified path."""
+    try:
+        df = pd.read_csv(data_path)
+        if df.empty:
+            click.secho("The dataset is empty. Nothing to preprocess.", fg='yellow')
+            return None
+        logging.info("Data loaded successfully for preprocessing.")
+        return df
+    except FileNotFoundError:
+        click.secho(f"Error: Data file not found at '{data_path}'.", fg='red')
+        logging.error(f"Data file not found at '{data_path}'.")
+        return None
+    except pd.errors.EmptyDataError:
+        click.secho("The data file is empty.", fg='red')
+        logging.error("The data file is empty.")
+        return None
+    except pd.errors.ParserError:
+        click.secho("Error parsing the data file. Please check the file format.", fg='red')
+        logging.error("Error parsing the data file.")
+        return None
+    except Exception as e:
+        click.secho(f"An unexpected error occurred while loading data for preprocessing: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while loading data for preprocessing: {e}")
+        return None
+
+def encode_categorical_columns(df):
+    """One-hot encode categorical columns in the DataFrame."""
+    try:
+        object_cols = df.select_dtypes(include=['object']).columns
+        if len(object_cols) > 0:
+            df = pd.get_dummies(df, columns=object_cols, drop_first=True)
+            logging.info(f"One-hot encoded columns: {list(object_cols)}")
+        return df
+    except AttributeError:
+        click.secho("Error: The dataset is not a valid DataFrame.", fg='red')
+        logging.error("The dataset is not a valid DataFrame.")
+        return None
+    except Exception as e:
+        click.secho(f"An unexpected error occurred during one-hot encoding: {e}", fg='red')
+        logging.error(f"An unexpected error occurred during one-hot encoding: {e}")
+        return None
+
+def load_config(config_file='config.yaml'):
+    """Load configuration file to get the data path."""
+    try:
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f)
+        data_path = config_data['data']['data_path']
+        return data_path
+    except FileNotFoundError:
+        click.secho(f"Error: Configuration file '{config_file}' not found.", fg='red')
+        logging.error(f"Configuration file not found: {config_file}")
+        return None
+    except yaml.YAMLError as e:
+        click.secho(f"Error parsing YAML file: {e}", fg='red')
+        logging.error(f"Error parsing YAML file: {e}")
+        return None
+    except KeyError:
+        click.secho("Error: 'data_path' not found in the configuration file.", fg='red')
+        logging.error("'data_path' not found in the configuration file.")
+        return None
+    except Exception as e:
+        click.secho(f"An unexpected error occurred while reading the configuration file: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while reading the configuration file: {e}")
+        return None
