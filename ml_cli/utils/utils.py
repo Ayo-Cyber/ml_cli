@@ -408,3 +408,17 @@ def load_config(config_file='config.yaml'):
         click.secho(f"An unexpected error occurred while reading the configuration file: {e}", fg='red')
         logging.error(f"An unexpected error occurred while reading the configuration file: {e}")
         return None
+    
+def save_preprocessed_data(df, file_path):
+    """Save the preprocessed DataFrame to a specified file path."""
+    try:
+        df.to_csv(file_path, index=False)
+        click.secho(f"Preprocessed data saved to {file_path}", fg="green")
+        logging.info(f"Preprocessed data saved at: {file_path}")
+        log_artifact(file_path)
+    except IOError as e:
+        click.secho(f"Error saving preprocessed data to {file_path}: {e}", fg='red')
+        logging.error(f"Error saving preprocessed data to {file_path}: {e}")
+    except Exception as e:
+        click.secho(f"An unexpected error occurred while saving preprocessed data: {e}", fg='red')
+        logging.error(f"An unexpected error occurred while saving preprocessed data: {e}")
