@@ -757,56 +757,6 @@ def get_validated_output_dir():
 
     return "output"
 
-def convert_numpy_types(obj):
-    """Convert NumPy types to native Python types for JSON serialization"""
-    if isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    elif isinstance(obj, np.bool_):
-        return bool(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif isinstance(obj, (list, tuple)):
-        return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, dict):
-        return {key: convert_numpy_types(value) for key, value in obj.items()}
-    else:
-        return obj
-
-def format_prediction_response(prediction, feature_info, probabilities=None):
-    """Format prediction response based on task type"""
-    task_type = feature_info.get("task_type", "unknown").lower()
-    
-    # Convert prediction to native Python type
-    prediction_value = convert_numpy_types(prediction[0]) if len(prediction) > 0 else None
-    
-    result = {
-        "prediction": prediction_value,
-        "task_type": task_type,
-    }
-    
-    # Add task-specific information
-    if task_type == "classification":
-        if probabilities is not None:
-            result["probabilities"] = convert_numpy_types(probabilities)
-            result["confidence"] = float(max(probabilities)) if probabilities else None
-        
-        # For classification, add class information if available
-        target_column = feature_info.get("target_column")
-        if target_column:
-            result["predicted_class"] = prediction_value
-            
-    elif task_type == "regression":
-        # For regression, the prediction is the actual value
-        result["predicted_value"] = prediction_value
-        
-    elif task_type == "clustering":
-        # For clustering, prediction is the cluster ID
-        result["cluster_id"] = prediction_value
-        result["cluster"] = f"Cluster_{prediction_value}"
-    
-    return result
 
 
 def is_valid_directory_name(name):
