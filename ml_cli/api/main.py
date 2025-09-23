@@ -1,14 +1,10 @@
-import joblib
+import os
+import logging
+import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Body
-from pydantic import create_model
-from typing import Any, Dict
-import os
-import json
-import logging
-from pathlib import Path
 from fastapi.openapi.utils import get_openapi
-from ml_cli.utils.utils import generate_realistic_example_from_stats, load_model
+from ml_cli.utils.utils import load_model, get_config_output_dir, format_prediction_response
 
 # Create the FastAPI app
 app = FastAPI(
@@ -17,243 +13,267 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Global variables for this module
 pipeline = None
 feature_info = None
 PredictionPayload = None
 sample_input_for_docs = None
 
 
-
 @app.on_event("startup")
 def startup_event():
-    config_path = os.getenv("ML_CLI_CONFIG", "config.yaml")
-    output_dir = "output"
-    if os.path.exists(config_path):
-        import yaml
-        with open(config_path, 'r') as f:
-            try:
-                config = yaml.safe_load(f)
-                output_dir = config.get('output_dir', 'output')
-            except yaml.YAMLError as exc:
-                raise HTTPException(status_code=500, detail=f"Error loading config file: {exc}")
-    load_model(output_dir)
-
-def get_dynamic_example():
-    """Get the current dynamic example based on loaded model"""
-    if sample_input_for_docs:
-        return sample_input_for_docs
-    elif feature_info:
-        # Regenerate if needed
-        return generate_realistic_example_from_stats(feature_info)
-    else:
-        return {}
-
-@app.get("/")
-def root():
-    """Root endpoint with API information"""
-    return {
-        "message": "Welcome to the ML-CLI API!",
-        "endpoints": {
-            "predict": "/predict - Make predictions (with dynamic examples!)",
-            "example": "/example - Get current example input data", 
-            "model_info": "/model-info - Get model information",
-            "health": "/health - Health check",
-            "docs": "/docs - Interactive API documentation"
-        },
-        "tip": "Visit /docs to see the predict endpoint with auto-generated examples!"
-    }
-
-@app.get("/health")
-def health():
-    """Health check endpoint"""
-    return {
-        "status": "ok",
-        "model_loaded": pipeline is not None,
-        "feature_info_loaded": feature_info is not None,
-        "example_available": sample_input_for_docs is not None,
-        "feature_count": len(feature_info.get('feature_names', [])) if feature_info else 0
-    }
-
-@app.get("/example")
-def get_example():
-    """Get dynamically generated example input data for testing"""
-    current_example = get_dynamic_example()
-    
-    if not current_example:
-        raise HTTPException(status_code=503, detail="Model not loaded or example data not available.")
-    
-    return {
-        "example_input": current_example,
-        "feature_count": len(current_example),
-        "usage": "Use this as the request body for POST /predict",
-        "curl_example": f"""curl -X POST "http://localhost:8000/predict" \\
-     -H "Content-Type: application/json" \\
-     -d '{json.dumps(current_example)}'""",
-        "note": "This example is generated from your actual model's feature statistics"
-    }
-
-@app.get("/model-info")
-def model_info():
-    """Get comprehensive model information"""
-    if not feature_info:
-        raise HTTPException(status_code=503, detail="Model not loaded. Please train a model first.")
-    
-    current_example = get_dynamic_example()
-    
-    return {
-        "feature_info": feature_info,
-        "sample_input": current_example,
-        "model_loaded": pipeline is not None,
-        "feature_count": len(feature_info.get('feature_names', [])),
-        "features": feature_info.get('feature_names', []),
-        "has_statistics": 'feature_statistics' in feature_info,
-        "example_source": "feature_statistics" if 'feature_statistics' in feature_info else "default_values"
-    }
-
-@app.post("/predict")
-def predict(
-    payload: Dict[str, Any] = Body(
-        ...,
-        description="Input features for prediction. The example below is auto-generated from your model's actual feature statistics!"
-    )
-):
-    """
-    🔮 Make a prediction based on the input payload.
-    
-    **Dynamic Example**: The example in the request body is automatically generated from your model's 
-    actual feature statistics (mean, median, or reasonable defaults), so it will work for any project!
-    
-    💡 **How it works**:
-    - If your model has feature statistics, it uses mean/median values
-    - Otherwise, it uses sensible default values
-    - The example updates automatically when you reload your model
-    
-    🚀 **Usage**: Click "Try it out" and the example will be pre-filled with realistic values!
-    """
-    if not pipeline or not feature_info:
-        raise HTTPException(status_code=503, detail="Model not loaded. Please train a model first.")
-
-    # Get current dynamic example for the docs
-    current_example = get_dynamic_example()
-    
-    # Update the Body example dynamically
-    if current_example:
-        # This is a bit of a hack, but we'll set the example in the response
-        pass
-
-    try:
-        # Validate that all required features are present
-        required_features = feature_info['feature_names']
-        missing_features = [f for f in required_features if f not in payload]
-        
-        if missing_features:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Missing required features: {missing_features}. Use GET /example to see the correct format."
-            )
-        
-        # Convert the payload to a DataFrame
-        df = pd.DataFrame([payload])
-
-        # Reorder columns to match training and select only required features
-        df = df[required_features]
-
-        # Make a prediction
-        prediction = pipeline.predict(df)
-        
-        # Try to get prediction probabilities if available
-        probabilities = None
-        if hasattr(pipeline, 'predict_proba'):
-            try:
-                probabilities = pipeline.predict_proba(df)
-                probabilities = probabilities.tolist()
-            except:
-                pass
-
-        result = {
-            "prediction": prediction.tolist(),
-            "input_features": payload,
-            "model_info": {
-                "features_used": len(required_features),
-                "prediction_type": "classification" if probabilities else "regression"
-            }
-        }
-        
-        if probabilities:
-            result["prediction_probabilities"] = probabilities
-            result["confidence"] = max(probabilities[0]) if probabilities else None
-
-        return result
-        
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid input values: {e}")
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Missing feature: {e}")
-    except Exception as e:
-        logging.error(f"Prediction error: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
-
-# Custom endpoint to get the current example for the OpenAPI schema
-@app.get("/predict/example")
-def get_predict_example():
-    """Get the current example that would be used in the predict endpoint"""
-    current_example = get_dynamic_example()
-    
-    if not current_example:
-        raise HTTPException(status_code=503, detail="No example available - model not loaded")
-    
-    return {
-        "example": current_example,
-        "description": "This example is dynamically generated from your model's feature statistics",
-        "copy_paste_ready": True
-    }
-
-@app.post("/reload-model")
-def reload_model():
-    """🔄 Reload the model and regenerate examples"""
+    """Load model on startup"""
     global pipeline, feature_info, PredictionPayload, sample_input_for_docs
     
-    old_example = sample_input_for_docs.copy() if sample_input_for_docs else None
+    config_path = os.getenv("ML_CLI_CONFIG", "config.yaml")
+    output_dir = get_config_output_dir(config_path)
     
-    pipeline = None
-    feature_info = None
-    PredictionPayload = None
-    sample_input_for_docs = None
+    try:
+        # Load model using utils function
+        loaded_pipeline, loaded_feature_info, loaded_payload_model, loaded_sample_input = load_model(output_dir)
+        
+        # Set globals in this module
+        pipeline = loaded_pipeline
+        feature_info = loaded_feature_info
+        PredictionPayload = loaded_payload_model
+        sample_input_for_docs = loaded_sample_input
+        
+        logging.info("Model startup completed successfully")
+        
+    except Exception as e:
+        logging.error(f"Error during model startup: {e}")
+        # Don't fail startup, but log the error
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "model_loaded": pipeline is not None}
+
+@app.get("/model-info")
+def get_model_info():
+    if pipeline is None or feature_info is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
     
-    startup_event()
+    task_type = feature_info.get("task_type", "unknown")
     
-    new_example = sample_input_for_docs
+    info = {
+        "model_type": task_type,
+        "feature_count": len(feature_info.get("feature_names", [])),
+        "feature_names": feature_info.get("feature_names", []),
+        "model_score": feature_info.get("model_score"),
+    }
+    
+    # Only add target_column for supervised tasks
+    if task_type.lower() in ["classification", "regression"]:
+        info["target_column"] = feature_info.get("target_column")
+    
+    return info
+
+@app.get("/predict/example")
+def get_prediction_example():
+    if sample_input_for_docs is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    return sample_input_for_docs
+
+@app.post("/predict")
+def predict(payload: dict = Body(...)):
+    if pipeline is None or feature_info is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    
+    try:
+        # Validate payload has all required features
+        feature_names = feature_info.get("feature_names", [])
+        missing_features = [f for f in feature_names if f not in payload]
+        if len(missing_features) > 0:  # Fixed: avoid ambiguous array truth value
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Missing required features: {missing_features}"
+            )
+        
+        # Create DataFrame from payload with explicit dtype handling
+        try:
+            input_df = pd.DataFrame([payload])
+            
+            # Ensure columns are in the right order and handle missing columns gracefully
+            for col in feature_names:
+                if col not in input_df.columns:
+                    raise HTTPException(status_code=400, detail=f"Missing feature: {col}")
+            
+            input_df = input_df[feature_names]
+            
+            # Convert to numeric where possible to avoid type issues
+            for col in input_df.columns:
+                try:
+                    input_df[col] = pd.to_numeric(input_df[col], errors='ignore')
+                except:
+                    pass  # Keep original type if conversion fails
+                    
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error creating input DataFrame: {str(e)}")
+        
+        # Make prediction with error handling
+        try:
+            prediction = pipeline.predict(input_df)
+        except Exception as e:
+            logging.error(f"Pipeline prediction error: {e}")
+            raise HTTPException(status_code=500, detail=f"Model prediction failed: {str(e)}")
+        
+        # Get prediction probabilities if available (for classification)
+        probabilities = None
+        task_type = feature_info.get("task_type", "").lower()
+        
+        if task_type == "classification" and hasattr(pipeline, "predict_proba"):
+            try:
+                proba = pipeline.predict_proba(input_df)
+                if proba is not None and len(proba) > 0:
+                    probabilities = proba[0]  # Get first (and only) row
+            except Exception as e:
+                logging.warning(f"Could not get prediction probabilities: {e}")
+        
+        # Format response based on task type
+        result = format_prediction_response(prediction, feature_info, probabilities)
+        
+        # Add input features for reference
+        result["input_features"] = payload
+            
+        return result
+        
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
+    except Exception as e:
+        logging.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=400, detail=f"Prediction error: {str(e)}")
+
+@app.get("/predict/batch", summary="Get batch prediction example")
+def get_batch_prediction_example():
+    """Get an example of batch prediction format"""
+    if sample_input_for_docs is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
     
     return {
-        "message": "Model reloaded successfully",
-        "model_loaded": pipeline is not None,
-        "example_updated": old_example != new_example,
-        "new_example": new_example,
-        "feature_count": len(new_example) if new_example else 0,
-        "tip": "Visit /docs to see the updated example in the predict endpoint!"
+        "examples": [
+            sample_input_for_docs,
+            sample_input_for_docs  # You could modify this to show variation
+        ]
     }
 
-# Override the OpenAPI schema to include dynamic examples
-@app.get("/openapi.json", include_in_schema=False)
-def custom_openapi():
-    """Custom OpenAPI schema with dynamic examples"""
+@app.post("/predict/batch")
+def predict_batch(payload: dict = Body(...)):
+    """Make predictions on multiple samples"""
+    if pipeline is None or feature_info is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
     
+    try:
+        # Expect payload to have "samples" key with list of feature dictionaries
+        if "samples" not in payload:
+            raise HTTPException(status_code=400, detail="Payload must contain 'samples' key with list of feature dictionaries")
+        
+        samples = payload["samples"]
+        if not isinstance(samples, list) or len(samples) == 0:
+            raise HTTPException(status_code=400, detail="'samples' must be a non-empty list")
+        
+        feature_names = feature_info.get("feature_names", [])
+        
+        # Validate all samples
+        for i, sample in enumerate(samples):
+            missing_features = [f for f in feature_names if f not in sample]
+            if len(missing_features) > 0:  # Fixed: avoid ambiguous array truth value
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Sample {i} missing required features: {missing_features}"
+                )
+        
+        # Create DataFrame from all samples
+        try:
+            input_df = pd.DataFrame(samples)
+            input_df = input_df[feature_names]
+            
+            # Convert to numeric where possible
+            for col in input_df.columns:
+                try:
+                    input_df[col] = pd.to_numeric(input_df[col], errors='ignore')
+                except:
+                    pass
+                    
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error creating batch DataFrame: {str(e)}")
+        
+        # Make predictions
+        try:
+            predictions = pipeline.predict(input_df)
+        except Exception as e:
+            logging.error(f"Batch prediction error: {e}")
+            raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}")
+        
+        # Get probabilities if available
+        probabilities = None
+        task_type = feature_info.get("task_type", "").lower()
+        
+        if task_type == "classification" and hasattr(pipeline, "predict_proba"):
+            try:
+                probabilities = pipeline.predict_proba(input_df)
+            except Exception as e:
+                logging.warning(f"Could not get prediction probabilities: {e}")
+        
+        # Format results
+        results = []
+        for i, (sample, pred) in enumerate(zip(samples, predictions)):
+            prob = probabilities[i] if probabilities is not None else None
+            result = format_prediction_response([pred], feature_info, prob)
+            result["input_features"] = sample
+            result["sample_index"] = i
+            results.append(result)
+        
+        return {
+            "predictions": results,
+            "total_samples": len(samples),
+            "task_type": task_type
+        }
+        
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
+    except Exception as e:
+        logging.error(f"Batch prediction error: {e}")
+        raise HTTPException(status_code=400, detail=f"Batch prediction error: {str(e)}")
+
+def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
     
     openapi_schema = get_openapi(
-        title=app.title,
-        version=app.version,
-        description=app.description,
+        title="ML-CLI API",
+        version="1.0.0",
+        description="API for ML model predictions with dynamic examples",
         routes=app.routes,
     )
     
-    # Add dynamic example to the predict endpoint
-    current_example = get_dynamic_example()
-    if current_example and "paths" in openapi_schema and "/predict" in openapi_schema["paths"]:
-        predict_post = openapi_schema["paths"]["/predict"]["post"]
-        if "requestBody" in predict_post:
-            predict_post["requestBody"]["content"]["application/json"]["example"] = current_example
+    # Add example to the predict endpoint if we have sample input
+    if sample_input_for_docs:
+        predict_path = openapi_schema["paths"].get("/predict")
+        if predict_path and "post" in predict_path:
+            predict_path["post"]["requestBody"] = {
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "object"},
+                        "example": sample_input_for_docs
+                    }
+                }
+            }
+        
+        # Add example for batch prediction
+        batch_predict_path = openapi_schema["paths"].get("/predict/batch")
+        if batch_predict_path and "post" in batch_predict_path:
+            batch_predict_path["post"]["requestBody"] = {
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "object"},
+                        "example": {
+                            "samples": [sample_input_for_docs, sample_input_for_docs]
+                        }
+                    }
+                }
+            }
     
     app.openapi_schema = openapi_schema
     return app.openapi_schema
+
+app.openapi = custom_openapi

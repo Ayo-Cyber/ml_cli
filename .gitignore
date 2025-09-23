@@ -7,3 +7,4 @@ QUICK_START.md
 heart.csv
 acme
 .pytest_cache/
+test.py
