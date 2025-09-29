@@ -20,7 +20,7 @@ from ml_cli.commands.clean import clean
 from ml_cli.commands.train import train
 from ml_cli.commands.predict import predict
 from ml_cli.commands.serve import serve
-from ml_cli.commands.completion import completion
+
 
 @click.group()
 def cli():
@@ -36,7 +36,7 @@ cli.add_command(clean)
 cli.add_command(train)
 cli.add_command(predict)
 cli.add_command(serve)
-cli.add_command(completion)
+
 
 if __name__ == "__main__":
     cli()
