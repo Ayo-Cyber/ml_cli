@@ -69,16 +69,25 @@ def startup_event():
     load_model(output_dir)
 
 @app.post("/predict")
-def predict(payload: PredictionPayload = Body(..., example=sample_input_for_docs)):
+def predict(payload: dict = Body(...)):
     """
     Make a prediction based on the input payload.
+    Accepts a dictionary with feature names as keys and their values.
     """
     if not pipeline or not feature_info:
         raise HTTPException(status_code=503, detail="Model not loaded. Please train a model first.")
 
     try:
+        # Validate that all required features are present
+        missing_features = set(feature_info['feature_names']) - set(payload.keys())
+        if missing_features:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Missing required features: {missing_features}"
+            )
+        
         # Convert the payload to a DataFrame
-        df = pd.DataFrame([payload.dict()])
+        df = pd.DataFrame([payload])
 
         # Reorder columns to match training
         df = df[feature_info['feature_names']]
@@ -88,6 +97,8 @@ def predict(payload: PredictionPayload = Body(..., example=sample_input_for_docs
 
         # Return the prediction
         return {"prediction": prediction.tolist()}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

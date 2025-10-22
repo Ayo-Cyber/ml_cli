@@ -1,55 +1,67 @@
 Metadata-Version: 2.4
-Name: ml_cli
-Version: 0.1
-Summary: A brief description of your project
-Home-page: https://github.com/Ayo-Cyber/ml_cli.git
+Name: ml-cli
+Version: 1.0.0
+Summary: A comprehensive CLI tool for end-to-end machine learning workflows
+Home-page: https://github.com/Ayo-Cyber/ml_cli
 Author: Atunrase Ayomide
 Author-email: atunraseayomide@gmail.com
+Project-URL: Bug Tracker, https://github.com/Ayo-Cyber/ml_cli/issues
+Project-URL: Documentation, https://github.com/Ayo-Cyber/ml_cli#readme
+Project-URL: Source Code, https://github.com/Ayo-Cyber/ml_cli
+Project-URL: Changelog, https://github.com/Ayo-Cyber/ml_cli/blob/main/CHANGELOG.md
+Keywords: machine-learning,ml,cli,automl,data-science,tpot,automation,preprocessing,eda,model-training
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
 Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
-Requires-Python: >=3.9
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX :: Linux
+Requires-Python: >=3.8
 Description-Content-Type: text/markdown
-Requires-Dist: pandas==2.2.2
-Requires-Dist: click==8.1.7
-Requires-Dist: pyyaml==6.0.1
-Requires-Dist: questionary==2.0.1
-Requires-Dist: tqdm==4.66.4
-Requires-Dist: rich==13.7.1
-Requires-Dist: rich-click==1.8.2
-Requires-Dist: configparser==7.0.0
-Requires-Dist: python-dotenv==1.0.1
-Requires-Dist: requests==2.32.3
-Requires-Dist: pytest==8.3.2
-Requires-Dist: psutil
-Requires-Dist: fastapi==0.111.1
-Requires-Dist: uvicorn==0.30.1
-Requires-Dist: numpy==1.26.4
-Requires-Dist: scikit-learn==1.5.1
-Requires-Dist: joblib==1.4.2
-Requires-Dist: tpot==0.12.2
-Requires-Dist: matplotlib==3.9.1
-Requires-Dist: seaborn==0.13.2
-Requires-Dist: python-multipart
-Requires-Dist: gunicorn
-Requires-Dist: Jinja2
-Requires-Dist: itsdangerous
-Requires-Dist: python-jose
-Requires-Dist: passlib
-Requires-Dist: bcrypt
-Requires-Dist: SQLAlchemy
-Requires-Dist: psycopg2-binary
-Requires-Dist: alembic
-Requires-Dist: greenlet
-Requires-Dist: pydantic-settings
-Requires-Dist: certifi
-Requires-Dist: pyarrow
+License-File: LICENSE
+Requires-Dist: click>=8.0.0
+Requires-Dist: rich-click>=1.6.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: scikit-learn>=1.0.0
+Requires-Dist: tpot>=0.12.0
+Requires-Dist: matplotlib>=3.4.0
+Requires-Dist: seaborn>=0.11.0
+Requires-Dist: fastapi>=0.68.0
+Requires-Dist: uvicorn>=0.15.0
+Requires-Dist: pyyaml>=5.4.0
+Requires-Dist: joblib>=1.0.0
+Requires-Dist: ydata-profiling>=4.0.0
+Requires-Dist: questionary>=1.10.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: requests>=2.26.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=3.0.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.6.0; extra == "dev"
+Requires-Dist: flake8>=4.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: isort>=5.10.0; extra == "dev"
 Dynamic: author
 Dynamic: author-email
 Dynamic: classifier
 Dynamic: description
 Dynamic: description-content-type
 Dynamic: home-page
+Dynamic: keywords
+Dynamic: license-file
+Dynamic: project-url
+Dynamic: provides-extra
 Dynamic: requires-dist
 Dynamic: requires-python
 Dynamic: summary
@@ -111,7 +123,7 @@ pip install click pandas scikit-learn tpot pyyaml
 
    ```yaml
    data:
-     data_path: 'path/to/your/raw_data.csv'  # Path to raw data file
+     path: 'path/to/your/raw_data.csv'  # Path to raw data file
      target_column: 'your_target_column'      # Name of the target column
    task:
      type: 'classification'                    # Task type: 'classification' or 'regression'
@@ -121,13 +133,7 @@ pip install click pandas scikit-learn tpot pyyaml
 
 ## Usage
 
-To run the ML pipeline, use the following command:
 
-```bash
-ml run
-```
-
-This command will check for the preprocessed CSV file and load it if found. If not found, it will use the raw data specified in the `config.yaml` file.
 
 ### Train the model
 

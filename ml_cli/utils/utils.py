@@ -10,6 +10,7 @@ import logging
 import io
 from typing import Optional
 from pydantic import ValidationError
+from ml_cli.config.models import MLConfig
 
 
 # Constants for file extensions

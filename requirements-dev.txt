@@ -1,0 +1,25 @@
+# Development and Testing Dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=3.0.0
+pytest-mock>=3.6.0
+
+# Code Quality & Formatting
+flake8>=4.0.0
+black>=22.0.0
+isort>=5.10.0
+autoflake>=2.0.0
+mypy>=0.950
+
+# Building and Publishing
+build>=0.10.0
+twine>=4.0.0
+
+# Documentation
+sphinx>=4.5.0
+sphinx-rtd-theme>=1.0.0
+
+# CI/CD Testing
+act>=0.2.0  # For running GitHub Actions locally (optional)

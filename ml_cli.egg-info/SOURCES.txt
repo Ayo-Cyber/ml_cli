@@ -1,3 +1,4 @@
+LICENSE
 README.md
 setup.py
 ml_cli/__init__.py
@@ -16,11 +17,15 @@ ml_cli/commands/predict.py
 ml_cli/commands/preprocess.py
 ml_cli/commands/serve.py
 ml_cli/commands/train.py
+ml_cli/config/__init__.py
+ml_cli/config/models.py
 ml_cli/core/__init__.py
 ml_cli/core/data.py
 ml_cli/core/predict.py
 ml_cli/core/train.py
 ml_cli/utils/__init__.py
+ml_cli/utils/exceptions.py
 ml_cli/utils/utils.py
-tests/__init__.py
+tests/test_api.py
 tests/test_cli.py
+tests/test_commands.py

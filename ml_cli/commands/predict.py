@@ -4,6 +4,7 @@ import joblib
 import json
 import os
 from ml_cli.utils.exceptions import ModelError, DataError
+from ml_cli.utils.utils import load_config
 
 @click.command(help="""Make predictions on new data using a trained model.
 
