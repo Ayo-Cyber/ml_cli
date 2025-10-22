@@ -1,48 +1,59 @@
 Metadata-Version: 2.4
 Name: ml_cli
-Version: 0.1
-Summary: A brief description of your project
-Home-page: https://github.com/Ayo-Cyber/ml_cli.git
+Version: 0.1.0
+Summary: A CLI tool for machine learning workflows
+Home-page: https://github.com/yourusername/ml_cli
 Author: Atunrase Ayomide
 Author-email: atunraseayomide@gmail.com
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
 Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
-Requires-Python: >=3.9
+Requires-Python: >=3.8
 Description-Content-Type: text/markdown
-Requires-Dist: pandas==2.2.2
-Requires-Dist: click==8.1.7
-Requires-Dist: pyyaml==6.0.1
-Requires-Dist: questionary==2.0.1
-Requires-Dist: tqdm==4.66.4
-Requires-Dist: rich==13.7.1
-Requires-Dist: configparser==7.0.0
-Requires-Dist: python-dotenv==1.0.1
-Requires-Dist: requests==2.32.3
-Requires-Dist: pytest==8.3.2
-Requires-Dist: psutil
-Requires-Dist: fastapi==0.111.1
-Requires-Dist: uvicorn==0.30.1
-Requires-Dist: numpy==1.26.4
-Requires-Dist: scikit-learn==1.6
-Requires-Dist: joblib==1.4.2
-Requires-Dist: tpot==1.1.0
-Requires-Dist: matplotlib==3.9.1
-Requires-Dist: seaborn==0.13.2
-Requires-Dist: python-multipart
-Requires-Dist: gunicorn
-Requires-Dist: Jinja2
-Requires-Dist: itsdangerous
-Requires-Dist: python-jose
-Requires-Dist: passlib
-Requires-Dist: bcrypt
-Requires-Dist: SQLAlchemy
-Requires-Dist: psycopg2-binary
-Requires-Dist: alembic
-Requires-Dist: greenlet
-Requires-Dist: pydantic-settings
-Requires-Dist: certifi
-Requires-Dist: pyarrow
+Requires-Dist: setuptools>=65.0.0
+Requires-Dist: pandas<2.3.0,>=2.0.0
+Requires-Dist: click<9.0.0,>=8.0.0
+Requires-Dist: rich-click<2.0.0,>=1.6.0
+Requires-Dist: pyyaml<7.0.0,>=6.0.0
+Requires-Dist: questionary<3.0.0,>=1.10.0
+Requires-Dist: tqdm<5.0.0,>=4.60.0
+Requires-Dist: rich<14.0.0,>=12.0.0
+Requires-Dist: numpy<2.0.0,>=1.21.0
+Requires-Dist: configparser<8.0.0,>=5.0.0
+Requires-Dist: python-dotenv<2.0.0,>=0.19.0
+Requires-Dist: requests<3.0.0,>=2.25.0
+Requires-Dist: pytest<9.0.0,>=7.0.0
+Requires-Dist: psutil>=5.8.0
+Requires-Dist: fastapi<1.0.0,>=0.100.0
+Requires-Dist: uvicorn<1.0.0,>=0.20.0
+Requires-Dist: scikit-learn<2.0.0,>=1.1.0
+Requires-Dist: joblib<2.0.0,>=1.1.0
+Requires-Dist: tpot<2.0.0,>=0.12.0
+Requires-Dist: matplotlib<4.0.0,>=3.5.0
+Requires-Dist: seaborn<1.0.0,>=0.11.0
+Requires-Dist: python-multipart>=0.0.5
+Requires-Dist: gunicorn>=20.1.0
+Requires-Dist: Jinja2<4.0.0,>=3.0.0
+Requires-Dist: itsdangerous<3.0.0,>=2.0.0
+Requires-Dist: python-jose<4.0.0,>=3.3.0
+Requires-Dist: passlib<2.0.0,>=1.7.0
+Requires-Dist: bcrypt<5.0.0,>=3.2.0
+Requires-Dist: SQLAlchemy<3.0.0,>=1.4.0
+Requires-Dist: psycopg2-binary<3.0.0,>=2.9.0
+Requires-Dist: alembic<2.0.0,>=1.7.0
+Requires-Dist: greenlet<4.0.0,>=1.1.0
+Requires-Dist: pydantic-settings<3.0.0,>=2.0.0
+Requires-Dist: certifi>=2021.0.0
+Requires-Dist: pyarrow<16.0.0,>=10.0.0
 Dynamic: author
 Dynamic: author-email
 Dynamic: classifier
@@ -53,240 +64,538 @@ Dynamic: requires-dist
 Dynamic: requires-python
 Dynamic: summary
 
-# ML CLI Pipeline
+# 🤖 ML CLI Pipeline
 
-[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+<div align="center">
+
+[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![PyPI Version](https://img.shields.io/badge/pypi-v0.1.0-orange.svg)](https://pypi.org/project/ml-cli/)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+**A comprehensive command-line interface for end-to-end machine learning workflows**
+
+[Quick Start](#-quick-start) • [Documentation](#-documentation) • [Examples](#-examples) • [Contributing](#-contributing)
+
+</div>
 
 ## 🚀 Overview
 
-The ML CLI Pipeline is a command-line interface (CLI) tool for streamlined machine learning workflows. It helps manage ML projects from initialization to deployment.
+ML CLI Pipeline is a powerful, user-friendly command-line tool that streamlines the entire machine learning workflow. From data exploration to model deployment, it provides a unified interface for data scientists and ML engineers to build, train, and serve machine learning models with minimal setup.
 
-Built with `click` and leveraging the robust `TPOT` library for automated machine learning (AutoML), this tool empowers data scientists and developers to effortlessly manage their ML projects from data preparation to model deployment.
+Built with modern Python technologies including **FastAPI**, **TPOT AutoML**, and **Click**, this tool eliminates the repetitive scripting often required in ML projects and provides production-ready model serving capabilities.
 
-With ML CLI, you can:
-- **Initialize** new ML projects with ease, setting up configurations for data, tasks, and output.
-- Perform **Exploratory Data Analysis (EDA)** to gain insights into your datasets.
-- **Preprocess** your data, handling categorical features automatically.
-- **Train** state-of-the-art machine learning models using AutoML (TPOT).
-- Make **predictions** on new data with your trained models.
-- **Serve** your models as a high-performance REST API using FastAPI, ready for integration into other applications.
-- **Clean up** generated artifacts to maintain a tidy project environment.
+### ✨ Why ML CLI Pipeline?
 
-Say goodbye to repetitive scripting and hello to a more efficient, automated ML development cycle!
+- **🎯 Zero Configuration**: Get started with a single command - no complex setup files
+- **🔄 End-to-End Workflow**: Complete ML pipeline from EDA to production deployment
+- **🤖 AutoML Integration**: Leverage TPOT for automated model selection and hyperparameter tuning
+- **🚀 Production Ready**: Built-in FastAPI server for immediate model deployment
+- **📊 Rich Visualizations**: Automated EDA reports with beautiful plots and statistics
+- **🔧 Flexible Configuration**: Support for both YAML and JSON configuration formats
+- **🧪 Thoroughly Tested**: Comprehensive test suite ensuring reliability
 
 ## ✨ Features
 
-*   **Project Initialization (`ml init`)**: Quickly set up a new ML project with an interactive wizard, defining data paths, target columns, task types (classification, regression, clustering), and TPOT parameters. Supports both YAML and JSON configuration formats.
-*   **Exploratory Data Analysis (`ml eda`)**: Generate comprehensive summary statistics, missing value reports, and correlation matrix heatmaps for your dataset, saving them as CSV and PNG files.
-*   **Data Preprocessing (`ml preprocess`)**: Automatically handle categorical features using one-hot encoding, preparing your data for model training. Saves the preprocessed data for future use.
-*   **Model Training (`ml train`)**: Train robust ML models using TPOT's AutoML capabilities. The best-performing pipeline is exported as a Python script and a scikit-learn compatible `.pkl` file, along with feature metadata.
-*   **Prediction (`ml predict`)**: Utilize your trained models to make predictions on new, unseen data. Specify input data, output path for predictions, and the model's output directory.
-*   **Model Serving (`ml serve`)**: Deploy your trained model as a production-ready REST API using FastAPI. The API automatically adapts to your model's features and provides endpoints for predictions, model info, and health checks.
-*   **Artifact Cleanup (`ml clean`)**: Remove all generated files (e.g., EDA reports, preprocessed data, trained models) that are tracked in the `.artifacts.log` file, ensuring a clean project directory.
+<table>
+<tr>
+<td width="50%">
+
+### 🛠️ **Core Capabilities**
+- **Interactive Project Setup** - Guided initialization with intelligent defaults
+- **Automated EDA** - Comprehensive data analysis with visualizations
+- **Smart Preprocessing** - Automatic categorical encoding and data cleaning
+- **AutoML Training** - TPOT-powered model optimization
+- **Flexible Prediction** - Easy inference on new data
+- **Production Serving** - FastAPI-based REST API deployment
+
+</td>
+<td width="50%">
+
+### 🎯 **Advanced Features**
+- **Dynamic API Documentation** - Auto-generated examples from your data
+- **Model Reloading** - Hot-reload models without server restart
+- **Artifact Tracking** - Automatic cleanup of generated files
+- **Multi-format Support** - CSV, JSON, and remote URL data sources
+- **SSL Support** - Secure data fetching from HTTPS sources
+- **Rich CLI Interface** - Beautiful terminal output with progress bars
+
+</td>
+</tr>
+</table>
 
 ## 🛠️ Installation
 
-To get started with ML CLI, follow these simple steps:
+### Prerequisites
+- Python 3.9 or higher
+- pip (Python package installer)
 
-1.  **Clone the repository**:
+### Quick Install
 
-    ```bash
-    git clone https://github.com/yourusername/ml_cli.git
-    cd ml_cli
-    ```
+```bash
+# Clone the repository
+git clone https://github.com/Ayo-Cyber/ml_cli.git
+cd ml_cli
 
-2.  **Create and activate a virtual environment** (highly recommended):
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-    ```bash
-    python -m venv venv
-    source venv/bin/activate # On Windows use `venv\Scripts\activate`
-    ```
+# Install in development mode
+pip install -e .
+```
 
-3.  **Install the package in editable mode**:
+### Verify Installation
 
-    ```bash
-    pip install -e .
-    ```
-    This command installs the `ml_cli` package and its dependencies listed in `requirements.txt`.
+```bash
+ml --help
+```
 
-## 🚀 Usage
+You should see the ML CLI help menu with all available commands.
 
-All commands are accessed via the `ml` entry point.
+## 🚀 Quick Start
 
-### 1. Initialize Your Project (`ml init`)
+Get up and running in under 5 minutes:
 
-Start by setting up your project configuration. This command will guide you through the process.
+### 1. Initialize Your Project
 
 ```bash
 ml init
 ```
 
-**Options:**
-*   `--format [yaml|json]`: Format of the configuration file (default: `yaml`).
-*   `--ssl-verify / --no-ssl-verify`: Enable or disable SSL verification for URL data paths (default: `True`).
+This interactive command will:
+- Guide you through project setup
+- Validate your data file
+- Create optimized configuration
+- Set up your workspace
 
-**Example Walkthrough:**
-```
-$ ml init
-Initializing configuration...
-Please enter the data directory path: data/customer_churn_dataset-testing-master.csv
-Please select the task type: (Use arrow keys)
- > Classification
-   Regression
-   Clustering
-Please enter the target variable column: Churn
-Please enter the output directory path (output): my_ml_output
-Please enter the number of TPOT generations (4): 10
-Configuration file created at: config.yaml
-✅ Project initialized in current directory!
-💡 You can now run commands like 'ml train'.
-```
-
-### 2. Perform Exploratory Data Analysis (`ml eda`)
-
-Generate insights into your dataset. This command uses the `data_path` specified in your `config.yaml`.
+### 2. Explore Your Data
 
 ```bash
 ml eda
 ```
 
-**Output Files (generated in your current directory):**
-*   `summary_statistics.csv`: Descriptive statistics of your dataset.
-*   `eda_report.csv`: Report on missing values and data types.
-*   `correlation_matrix.png`: Heatmap visualizing feature correlations.
+Generates comprehensive analysis including:
+- 📊 Summary statistics (`summary_statistics.csv`)
+- 📈 Missing value reports (`eda_report.csv`)
+- 🔥 Correlation heatmaps (`correlation_matrix.png`)
 
-### 3. Preprocess Your Data (`ml preprocess`)
-
-Prepare your data for model training by handling categorical features.
+### 3. Preprocess Your Data
 
 ```bash
 ml preprocess
 ```
 
-**Options:**
-*   `--config, -c PATH`: Path to the configuration file (default: `config.yaml`).
+Automatically handles:
+- One-hot encoding for categorical variables
+- Data validation and cleaning
+- Feature preparation for training
 
-**Output File:**
-*   `output/preprocessed_data.csv` (or `YOUR_OUTPUT_DIR/preprocessed_data.csv`): Your dataset with categorical columns one-hot encoded.
-
-### 4. Train Your Model (`ml train`)
-
-Train an ML model using TPOT based on your configuration.
+### 4. Train Your Model
 
 ```bash
 ml train
 ```
 
-**Options:**
-*   `--config, -c PATH`: Path to the configuration file (default: `config.yaml`).
+Leverages TPOT AutoML to:
+- Find optimal algorithms
+- Tune hyperparameters
+- Export production-ready models
+- Generate performance metrics
 
-**Output Files (generated in your configured output directory, e.g., `output/`):**
-*   `best_model_pipeline.py`: A Python script representing the optimized scikit-learn pipeline.
-*   `fitted_pipeline.pkl`: The serialized scikit-learn pipeline object.
-*   `feature_info.json`: Metadata about the features and target column, including the model's performance score.
-
-### 5. Make Predictions (`ml predict`)
-
-Use your trained model to predict outcomes on new data.
-
-```bash
-ml predict -i path/to/new_data.csv -o path/to/predictions.csv -m output/
-```
-
-**Options:**
-*   `-i, --input-path PATH`: Path to the input data for predictions (e.g., `data/new_samples.csv`). **(Required)**
-*   `-o, --output-path PATH`: Path to save the predictions (e.g., `predictions.csv`). **(Required)**
-*   `-m, --model-path PATH`: Path to the output directory where the trained model is saved (e.g., `output/`). **(Required)**
-
-### 6. Serve Your Model (`ml serve`)
-
-Deploy your model as a local REST API.
+### 5. Serve Your Model
 
 ```bash
 ml serve
 ```
 
+Instantly deploy your model with:
+- 🌐 RESTful API endpoints
+- 📚 Interactive documentation at `/docs`
+- 🔄 Hot-reload capabilities
+- 📝 Auto-generated examples
+
+## 📖 Documentation
+
+### Command Reference
+
+<details>
+<summary><b>🔧 ml init</b> - Initialize new ML project</summary>
+
+```bash
+ml init [OPTIONS]
+```
+
 **Options:**
-*   `-h, --host TEXT`: The host to bind the server to (default: `127.0.0.1`).
-*   `-p, --port INTEGER`: The port to bind the server to (default: `8000`).
-*   `--reload / --no-reload`: Enable or disable auto-reloading of the server on code changes (default: `True`).
-*   `--config, -c PATH`: Path to the configuration file (default: `config.yaml`).
+- `--format [yaml|json]` - Configuration format (default: yaml)
+- `--ssl-verify/--no-ssl-verify` - SSL verification for URLs (default: enabled)
+
+**Features:**
+- Interactive project setup wizard
+- Data validation and target column detection
+- Intelligent default suggestions
+- Support for local files and URLs
+
+</details>
+
+<details>
+<summary><b>📊 ml eda</b> - Exploratory Data Analysis</summary>
+
+```bash
+ml eda
+```
+
+**Generates:**
+- Summary statistics for all features
+- Missing value analysis
+- Data type information
+- Correlation matrix visualization
+
+**Output Files:**
+- `summary_statistics.csv`
+- `eda_report.csv` 
+- `correlation_matrix.png`
+
+</details>
+
+<details>
+<summary><b>🧹 ml preprocess</b> - Data Preprocessing</summary>
+
+```bash
+ml preprocess [OPTIONS]
+```
+
+**Options:**
+- `--config, -c PATH` - Configuration file path (default: config.yaml)
+
+**Features:**
+- Automatic categorical variable encoding
+- Data validation and cleaning
+- Preprocessed data export
+
+</details>
+
+<details>
+<summary><b>🤖 ml train</b> - Model Training</summary>
+
+```bash
+ml train [OPTIONS]
+```
+
+**Options:**
+- `--config, -c PATH` - Configuration file path (default: config.yaml)
+
+**Outputs:**
+- `fitted_pipeline.pkl` - Serialized model
+- `best_model_pipeline.py` - Exportable Python script
+- `feature_info.json` - Model metadata and statistics
+
+</details>
+
+<details>
+<summary><b>🔮 ml predict</b> - Make Predictions</summary>
+
+```bash
+ml predict -i INPUT_FILE -o OUTPUT_FILE -m MODEL_DIR
+```
+
+**Required Options:**
+- `-i, --input-path PATH` - Input CSV file
+- `-o, --output-path PATH` - Output predictions file
+- `-m, --model-path PATH` - Model directory
+
+</details>
+
+<details>
+<summary><b>🚀 ml serve</b> - Model Serving</summary>
+
+```bash
+ml serve [OPTIONS]
+```
+
+**Options:**
+- `--host TEXT` - Host address (default: 127.0.0.1)
+- `--port INTEGER` - Port number (default: 8000)
+- `--reload/--no-reload` - Auto-reload on changes (default: True)
+- `--config, -c PATH` - Configuration file (default: config.yaml)
 
 **API Endpoints:**
-*   `GET /`: Welcome message and model status.
-*   `GET /health`: Health check.
-*   `GET /model-info`: Information about the loaded model and features.
-*   `POST /predict`: Make predictions using the trained model.
-*   `POST /reload-model`: Reload the model after retraining without restarting the server.
+- `GET /` - API information
+- `GET /health` - Health check
+- `GET /model-info` - Model metadata
+- `POST /predict` - Make predictions
+- `GET /docs` - Interactive documentation
 
-**Access API Documentation:**
-*   Swagger UI: `http://127.0.0.1:8000/docs`
-*   ReDoc: `http://127.0.0.1:8000/redoc`
+</details>
 
-### 7. Clean Up Artifacts (`ml clean`)
-
-Remove all generated files from your project.
+<details>
+<summary><b>🧹 ml clean</b> - Cleanup Artifacts</summary>
 
 ```bash
 ml clean
 ```
 
-This command reads the `.artifacts.log` file and deletes all paths listed within it, then removes the log file itself.
+Removes all generated files tracked in `.artifacts.log`
 
-## ⚙️ Configuration (`config.yaml`)
+</details>
 
-The `ml init` command generates a `config.yaml` (or `config.json`) file. Here's an example of a comprehensive configuration:
+### Configuration Format
+
+The [`ml init`](ml_cli/commands/init.py) command creates a configuration file with the following structure:
 
 ```yaml
-# config.yaml generated by 'ml init'
+# config.yaml
 data:
-  data_path: 'data/customer_churn_dataset-testing-master.csv' # Path to your raw data file or URL
-  target_column: 'Churn'                                     # Name of the target column for prediction
+  data_path: 'data/your_dataset.csv'
+  target_column: 'target'
+
 task:
-  type: 'classification'                                     # Task type: 'classification', 'regression', or 'clustering'
-output_dir: 'output'                                         # Directory to save all generated artifacts (models, reports, preprocessed data)
+  type: 'classification'  # or 'regression', 'clustering'
+
+output_dir: 'output'
+
 tpot:
-  generations: 4                                             # Number of generations for TPOT optimization
-  # You can add more TPOT parameters here, e.g.:
-  # population_size: 20
-  # verbosity: 2
+  generations: 4
+  population_size: 20
+  verbosity: 2
+
+training:
+  test_size: 0.2
+  random_state: 42
 ```
 
-## 📂 Project Structure
+## 💡 Examples
+
+### Complete Workflow Example
+
+```bash
+# 1. Set up project
+ml init
+# Follow prompts to configure your project
+
+# 2. Analyze your data
+ml eda
+
+# 3. Prepare data for training
+ml preprocess
+
+# 4. Train your model
+ml train
+
+# 5. Start API server
+ml serve --port 8080
+
+# 6. Test your API
+curl -X POST "http://localhost:8080/predict" \
+     -H "Content-Type: application/json" \
+     -d '{"feature1": 1.0, "feature2": 2.0}'
+```
+
+### Working with Remote Data
+
+```bash
+# Initialize with remote dataset
+ml init
+# Enter URL: https://example.com/dataset.csv
+
+# The tool automatically downloads and validates the data
+```
+
+### Custom Configuration
+
+```bash
+# Use JSON configuration
+ml init --format json
+
+# Train with custom config
+ml train --config my_config.yaml
+
+# Serve with custom host/port
+ml serve --host 0.0.0.0 --port 9000
+```
+
+## 🏗️ Architecture
+
+<div align="center">
+
+```mermaid
+graph TB
+    A[ml init] --> B[Configuration Setup]
+    B --> C[ml eda]
+    C --> D[Data Analysis]
+    D --> E[ml preprocess]
+    E --> F[Data Cleaning]
+    F --> G[ml train]
+    G --> H[TPOT AutoML]
+    H --> I[Model Export]
+    I --> J[ml serve]
+    J --> K[FastAPI Server]
+    
+    style A fill:#e1f5fe
+    style G fill:#f3e5f5
+    style J fill:#e8f5e8
+```
+
+</div>
+
+### Project Structure
 
 ```
 ml_cli/
-├── ml_cli/
-│   ├── api/             # FastAPI application for model serving
-│   ├── commands/        # CLI command implementations (init, eda, train, etc.)
-│   ├── core/            # Core logic for data loading, training, prediction
-│   ├── utils/           # Utility functions (logging, artifact tracking)
-│   └── cli.py           # Main CLI entry point
-├── tests/               # Unit and integration tests
-├── examples/            # Example datasets
-├── requirements.txt     # Python dependencies
-├── setup.py             # Package setup file
-└── README.md            # Project documentation
+├── 📁 ml_cli/
+│   ├── 🌐 api/              # FastAPI application
+│   │   └── main.py          # API endpoints and model serving
+│   ├── ⚡ commands/         # CLI command implementations
+│   │   ├── init.py          # Project initialization
+│   │   ├── eda.py           # Exploratory data analysis
+│   │   ├── train.py         # Model training
+│   │   ├── serve.py         # Model serving
+│   │   └── ...
+│   ├── 🧠 core/            # Core ML logic
+│   │   ├── data.py          # Data loading and validation
+│   │   └── train.py         # Training algorithms
+│   ├── 🛠️ utils/           # Utility functions
+│   │   └── utils.py         # Helper functions
+│   └── 🚀 cli.py           # Main CLI entry point
+├── 🧪 tests/               # Comprehensive test suite
+├── 📊 examples/            # Example datasets
+├── 📋 requirements.txt     # Dependencies
+└── ⚙️ setup.py            # Package configuration
+```
+
+## 🧪 Testing
+
+Run the comprehensive test suite:
+
+```bash
+# Run all tests
+python -m pytest
+
+# Run with coverage
+python -m pytest --cov=ml_cli
+
+# Run specific test file
+python -m pytest tests/test_cli.py -v
+```
+
+### Test the API
+
+Use the included [test script](test_api.py):
+
+```bash
+# Start the server
+ml serve
+
+# Run API tests (in another terminal)
+python test_api.py
 ```
 
 ## 🤝 Contributing
 
-Contributions are highly welcome! If you have suggestions for improvements, new features, or bug fixes, please follow these steps:
+We welcome contributions! Here's how to get started:
 
-1.  Fork the repository.
-2.  Create a new branch (`git checkout -b feature/your-feature-name`).
-3.  Make your changes and ensure tests pass.
-4.  Commit your changes (`git commit -m 'feat: Add new feature X'`).
-5.  Push to the branch (`git push origin feature/your-feature-name`).
-6.  Open a Pull Request.
+### Development Setup
 
-Please ensure your code adheres to the project's coding style and includes appropriate tests.
+```bash
+# Fork and clone the repository
+git clone https://github.com/YOUR_USERNAME/ml_cli.git
+cd ml_cli
+
+# Create development environment
+python -m venv venv
+source venv/bin/activate
+
+# Install in development mode with test dependencies
+pip install -e .
+pip install pytest pytest-cov black flake8
+
+# Run tests to ensure everything works
+pytest
+```
+
+### Contributing Guidelines
+
+1. **🍴 Fork** the repository
+2. **🌿 Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **✅ Test** your changes (`pytest`)
+4. **💫 Format** your code (`black ml_cli/`)
+5. **📝 Commit** your changes (`git commit -m 'feat: Add amazing feature'`)
+6. **🚀 Push** to the branch (`git push origin feature/amazing-feature`)
+7. **📬 Open** a Pull Request
+
+### Code Standards
+
+- Follow [PEP 8](https://pep8.org/) style guidelines
+- Use [Black](https://github.com/psf/black) for code formatting
+- Write comprehensive tests for new features
+- Update documentation for user-facing changes
+
+## 📈 Roadmap
+
+### Upcoming Features
+
+- [ ] 🐳 **Docker Support** - Containerized deployment
+- [ ] ☁️ **Cloud Integration** - AWS/GCP/Azure deployment
+- [ ] 📱 **Web UI** - Browser-based interface
+- [ ] 🔄 **Model Versioning** - Track model iterations
+- [ ] 📊 **Advanced Metrics** - Detailed performance analytics
+- [ ] 🛡️ **Model Monitoring** - Production model tracking
+- [ ] 🔌 **Plugin System** - Custom algorithm integration
+
+### Performance Improvements
+
+- [ ] ⚡ **Parallel Processing** - Multi-core training
+- [ ] 💾 **Caching** - Intelligent result caching
+- [ ] 📦 **Model Compression** - Optimized model sizes
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-## ❓ Support and Contact
+## 🆘 Support
 
-If you encounter any issues or have questions, please open an issue on the [GitHub repository](https://github.com/Ayo-Cyber/ml_cli/issues).
+### Getting Help
+
+- 📚 **Documentation**: Check this README and inline help (`ml --help`)
+- 🐛 **Bug Reports**: [Open an issue](https://github.com/Ayo-Cyber/ml_cli/issues)
+- 💡 **Feature Requests**: [Start a discussion](https://github.com/Ayo-Cyber/ml_cli/discussions)
+- 📧 **Direct Contact**: atunraseayomide@gmail.com
+
+### FAQ
+
+<details>
+<summary><b>Q: What data formats are supported?</b></summary>
+
+A: Currently supports CSV, TXT, and JSON files. Both local files and remote URLs (HTTP/HTTPS) are supported.
+</details>
+
+<details>
+<summary><b>Q: Can I use custom machine learning algorithms?</b></summary>
+
+A: Currently, the tool uses TPOT for AutoML. Custom algorithms will be supported in future versions through the plugin system.
+</details>
+
+<details>
+<summary><b>Q: How do I deploy models to production?</b></summary>
+
+A: Use `ml serve` to create a production-ready FastAPI server. For advanced deployment, consider using Docker or cloud platforms.
+</details>
+
+<details>
+<summary><b>Q: Is GPU training supported?</b></summary>
+
+A: GPU support depends on the underlying TPOT and scikit-learn implementations. Future versions will include explicit GPU acceleration.
+</details>
+
+---
+
+<div align="center">
+
+**⭐ Star this repo if you find it helpful!**
+
+Made with ❤️ by [Atunrase Ayomide](https://github.com/Ayo-Cyber)
+
+[🏠 Home](https://github.com/Ayo-Cyber/ml_cli) • [📖 Docs](#-documentation) • [🐛 Issues](https://github.com/Ayo-Cyber/ml_cli/issues) • [💬 Discussions](https://github.com/Ayo-Cyber/ml_cli/discussions)
+
+</div>
