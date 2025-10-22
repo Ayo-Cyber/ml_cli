@@ -14,22 +14,35 @@ def load_data(config: MLConfig) -> pd.DataFrame:
     logging.info("Checking for preprocessed CSV file...")
 
     if preprocessed_csv_path.exists():
-        print(f"Preprocessed CSV found: {preprocessed_csv_path}. Using this file.")
+        logging.info(f"Preprocessed CSV found: {preprocessed_csv_path}. Using this file.")
         data_path = preprocessed_csv_path
         log_artifact(str(preprocessed_csv_path))
     else:
+<<<<<<< HEAD
         print("No preprocessed CSV found. Using unprocessed data.")
         data_path = config.data.data_path
+=======
+        logging.info("No preprocessed CSV found. Using unprocessed data.")
+        data_path = config['data'].get('data_path')
+>>>>>>> main
         if not data_path:
             raise DataError("No data path specified in config. Use 'data_path' key.")
 
     try:
         data = pd.read_csv(data_path)
+        if data.empty:
+            logging.warning(f"The data file at {data_path} is empty.")
         logging.info(f"Data loaded successfully from {data_path}. Shape: {data.shape}")
         return data
     except FileNotFoundError:
         logging.error(f"Data file not found at {data_path}")
         raise
+    except pd.errors.EmptyDataError:
+        logging.error(f"The data file at {data_path} is empty.")
+        raise
+    except pd.errors.ParserError:
+        logging.error(f"Error parsing the data file at {data_path}. Please check the file format.")
+        raise
     except Exception as e:
-        logging.error(f"Error loading data: {e}")
+        logging.error(f"An unexpected error occurred while loading data from {data_path}: {e}")
         raise

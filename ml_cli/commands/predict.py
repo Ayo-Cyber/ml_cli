@@ -47,11 +47,14 @@ def predict(input_path, output_path, model_path, config_file):
         predictions = pipeline.predict(new_data)
 
         # Save the predictions
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         pd.DataFrame(predictions, columns=['predictions']).to_csv(output_path, index=False)
 
         click.secho(f"Predictions saved to {output_path}", fg="green")
+        logging.info(f"Predictions saved to {output_path}")
 
     except (DataError, ModelError) as e:
         click.secho(f"Error: {e}", fg='red')
     except Exception as e:
         click.secho(f"An unexpected error occurred: {e}", fg='red')
+        logging.error(f"An unexpected error occurred: {e}")

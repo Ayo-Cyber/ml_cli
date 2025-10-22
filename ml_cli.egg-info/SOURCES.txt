@@ -11,6 +11,7 @@ ml_cli.egg-info/requires.txt
 ml_cli.egg-info/top_level.txt
 ml_cli/commands/__init__.py
 ml_cli/commands/clean.py
+ml_cli/commands/completion.py
 ml_cli/commands/eda.py
 ml_cli/commands/init.py
 ml_cli/commands/predict.py

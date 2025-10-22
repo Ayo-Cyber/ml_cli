@@ -4,53 +4,16 @@ import yaml
 import logging
 import click
 import json
-from ml_cli.utils.exceptions import ConfigurationError, DataError
-
-
-def log_artifact(file_path):
-    """Log the generated artifact file path to `.artifacts.log`."""
-    artifact_log_path = os.path.join(os.getcwd(), '.artifacts.log')
-    with open(artifact_log_path, 'a') as log_file:
-        log_file.write(file_path + '\n')
-
-def load_data(data_path):
-    """Load the dataset from a specified path."""
-    try:
-        df = pd.read_csv(data_path)
-        logging.info("Data loaded successfully for preprocessing.")
-        return df
-    except (FileNotFoundError, pd.errors.EmptyDataError) as e:
-        raise DataError(f"Error loading data for preprocessing: {e}")
-
-def encode_categorical_columns(df):
-    """One-hot encode categorical columns in the DataFrame."""
-    try:
-        object_cols = df.select_dtypes(include=['object']).columns
-        if len(object_cols) > 0:
-            df = pd.get_dummies(df, columns=object_cols, drop_first=True)
-            logging.info(f"One-hot encoded columns: {list(object_cols)}")
-        return df
-    except Exception as e:
-        raise DataError(f"Error during one-hot encoding: {e}")
-
-def save_preprocessed_data(df, file_path):
-    """Save the preprocessed DataFrame to a specified file path."""
-    try:
-        df.to_csv(file_path, index=False)
-        click.secho(f"Preprocessed data saved to {file_path}", fg="green")
-        logging.info(f"Preprocessed data saved at: {file_path}")
-        log_artifact(file_path)
-    except Exception as e:
-        raise DataError(f"Error saving preprocessed data: {e}")
+from ml_cli.utils.utils import load_data, encode_categorical_columns, save_preprocessed_data
 
 @click.command(help="""Preprocess the dataset specified in the configuration file. 
-    
+
 Usage example:
   ml preprocess --config config.yaml
   ml preprocess --config config.json
 """)
 @click.option('--config', '-c', 'config_file', default="config.yaml",
-              help="Path to the configuration file (YAML or JSON).")
+              help='The absolute or relative path to the configuration file (config.yaml or config.json) that specifies data paths and preprocessing steps.')
 def preprocess(config_file):
     """Preprocess the dataset to handle non-numeric columns using OneHotEncoder."""
     click.secho("Preprocessing data...", fg="green")

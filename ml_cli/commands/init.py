@@ -1,6 +1,4 @@
 import click
-import json
-import yaml
 import questionary
 import sys
 import os
@@ -10,199 +8,203 @@ import io
 import requests
 from ml_cli.config.models import MLConfig, DataConfig, TaskConfig
 from ml_cli.utils.utils import (
-    write_config,
     should_prompt_target_column,
     is_readable_file,
     is_target_in_file,
     get_target_directory,
-    log_artifact
+    log_artifact,
+    download_data,
+    create_convenience_script,
+    save_configuration_safely,
+    get_validated_output_dir,
+    get_validated_data_path_input,
 )
 
-# Constants
+# Constants (UI text only)
 KEYBOARD_INTERRUPT_MESSAGE = "Operation cancelled by user."
-LOCAL_DATA_DIR = ".ml_cli"
-LOCAL_DATA_FILENAME = "local_data.csv"
 
-# Configure logging without timestamps
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s - %(message)s',  # Removed the timestamp
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
 
-def create_convenience_script(target_directory):
-    """Create a convenience script to help users navigate to the project directory."""
-    script_name = "activate.sh"
-    script_path = os.path.join(target_directory, script_name)
-    
-    script_content = f"""#!/bin/bash
-# Activate ML project environment
-# Usage: source {script_name}
-
-cd "{target_directory}"
-echo "✅ Activated ML project environment in: {target_directory}"
-echo "💡 You can now run commands like 'ml train', 'ml serve', etc."
-"""
-    
-    try:
-        with open(script_path, 'w') as f:
-            f.write(script_content)
-        os.chmod(script_path, 0o755)
-        log_artifact(script_path)
-        return script_path
-    except Exception as e:
-        logging.warning(f"Could not create convenience script: {e}")
-        return None
-
-def download_data(data_path, ssl_verify, target_directory):
-    """Download data from a URL and save it locally."""
-    if not data_path.startswith(('http://', 'https://')):
-        return data_path
-
-    click.secho(f"Downloading data from {data_path}...", fg="blue")
-    try:
-        response = requests.get(data_path, verify=ssl_verify, stream=True)
-        response.raise_for_status()
-
-        # Create local data directory
-        local_data_path = os.path.join(target_directory, LOCAL_DATA_DIR)
-        os.makedirs(local_data_path, exist_ok=True)
-
-        local_file_path = os.path.join(local_data_path, LOCAL_DATA_FILENAME)
-
-        with open(local_file_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        
-        click.secho(f"Data downloaded and saved to {local_file_path}", fg="green")
-        return local_file_path
-    except requests.exceptions.RequestException as e:
-        click.secho(f"Error downloading data: {e}", fg='red')
-        sys.exit(1)
-
-@click.command(help="""Initialize a new configuration file (YAML or JSON).
+@click.command(
+    help="""Initialize a new configuration file (YAML or JSON).
 
 Usage examples:
   ml init
   ml init --format json
 """
 )
-@click.option('--format', default='yaml', type=click.Choice(['yaml', 'json']), help='Format of the configuration file (yaml or json)')
-@click.option('--ssl-verify/--no-ssl-verify', default=True, help='Enable or disable SSL verification for URL data paths')
+@click.option(
+    "--format",
+    default="yaml",
+    type=click.Choice(["yaml", "json"]),
+    help="Specify the format of the configuration file to be created (yaml or json). Default is yaml.",
+)
+@click.option(
+    "--ssl-verify/--no-ssl-verify",
+    default=True,
+    help="Enable or disable SSL verification for data paths that are URLs. Default is enabled.",
+)
 def init(format, ssl_verify):
-    """Initialize a new configuration file (YAML or JSON)"""
+    """Initialize a new configuration file (YAML or JSON)."""
     click.secho("Initializing configuration...", fg="green")
 
-    start_time = time.time()  # Start timing
+    start_time = time.time()
 
-    # Store the original working directory before any changes
-    original_dir = os.getcwd()
-
-    # Determine the target directory based on user choice
-    target_directory = get_target_directory()
-
-    # Track if we created a new directory
-    created_new_directory = target_directory != original_dir
-
-    data_path_input = click.prompt('Please enter the data directory path', type=str)
-    click.echo(f"DEBUG: data_path_input = {data_path_input}")
-
-    # Log the data path input
-    logging.info(f"Data path provided: {data_path_input}")
-
-    # Download data if it's a URL
-    data_path = download_data(data_path_input, ssl_verify, target_directory)
-    click.echo(f"DEBUG: data_path = {data_path}")
-
-    # Check if the file path is readable, passing the SSL verification flag
-    if not is_readable_file(data_path, ssl_verify=ssl_verify):
-        click.secho("Error: The file does not exist, is not readable, or has an unsupported format. Please provide a valid CSV, TXT, or JSON file.", fg='red')
-        logging.error("Invalid data path provided.")
-        sys.exit(1)
-
-    task_type = questionary.select(
-        "Please select the task type:",
-        choices=[
-            questionary.Choice(title="Classification", value="classification"),
-            questionary.Choice(title="Regression", value="regression"),
-            questionary.Choice(title="Clustering", value="clustering")
-        ]
-    ).ask(kbi_msg=KEYBOARD_INTERRUPT_MESSAGE)
-    click.echo(f"DEBUG: task_type = {task_type}")
-
-    if task_type is None:
-        sys.exit(1)
-
-    # Log the task type selection
-    logging.info(f"Task type selected: {task_type}")
-
-    target_column = click.prompt('Please enter the target variable column', type=str) if should_prompt_target_column(task_type) else None
-    click.echo(f"DEBUG: target_column = {target_column}")
-
-    if target_column and not is_target_in_file(data_path, target_column, ssl_verify=ssl_verify):
-        click.secho(f"Error: The target column '{target_column}' is not present in the data file.", fg='red')
-        logging.error(f"Target column '{target_column}' not found in the data file.")
-        sys.exit(1)
-
-    output_dir = click.prompt('Please enter the output directory path', type=str, default='output')
-    click.echo(f"DEBUG: output_dir = {output_dir}")
-    generations = click.prompt('Please enter the number of TPOT generations', type=int, default=4)
-    click.echo(f"DEBUG: generations = {generations}")
-
-    # Create Pydantic models from the collected data
     try:
-        data_config = DataConfig(data_path=data_path, target_column=target_column)
-        task_config = TaskConfig(type=task_type)
-        ml_config = MLConfig(
-            data=data_config,
-            task=task_config,
-            output_dir=output_dir,
-            tpot={"generations": generations}
+        # 1) Remember where we started
+        original_dir = os.getcwd()
+
+        # 2) Choose target dir (utils may chdir when selecting/creating)
+        target_directory = get_target_directory()
+        if target_directory is None:
+            click.secho("❌ Setup cancelled.", fg="yellow")
+            sys.exit(1)
+
+        changed_directory = (target_directory != original_dir)
+        logging.info("Target directory chosen: %s", target_directory)
+
+        # 3) Ask for the data path (with retries handled inside util)
+        data_path_input = get_validated_data_path_input(ssl_verify)
+        if not data_path_input:
+            click.secho("❌ Setup cancelled. Unable to get valid data path.", fg="red")
+            sys.exit(1)
+
+        logging.info("Data path provided: %s", data_path_input)
+
+        # 4) If it's a URL, download to local project data folder; otherwise pass through
+        data_path = download_data(data_path_input, ssl_verify, target_directory)
+        if not data_path:
+            click.secho("❌ Could not obtain data locally.", fg="red")
+            sys.exit(1)
+
+        # 5) Sanity check readability/format
+        if not is_readable_file(data_path, ssl_verify=ssl_verify):
+            click.secho(
+                "Error: The file does not exist, is not readable, or has an unsupported format. "
+                "Please provide a valid CSV, TXT, or JSON file.",
+                fg="red",
+            )
+            logging.error("Invalid data path provided: %s", data_path)
+            sys.exit(1)
+
+        # 6) Task type
+        task_type = questionary.select(
+            "Please select the task type:",
+            choices=[
+                questionary.Choice(title="Classification", value="classification"),
+                questionary.Choice(title="Regression", value="regression"),
+                questionary.Choice(title="Clustering", value="clustering"),
+            ],
+        ).ask(kbi_msg=KEYBOARD_INTERRUPT_MESSAGE)
+
+        if task_type is None:
+            click.secho("❌ Setup cancelled.", fg="yellow")
+            sys.exit(1)
+
+        logging.info("Task type selected: %s", task_type)
+
+        # 7) Target column (only for supervised tasks)
+        target_column = None
+        if should_prompt_target_column(task_type):
+            for _ in range(3):
+                target_column = click.prompt("Please enter the target variable column", type=str).strip()
+                if target_column:
+                    break
+                click.secho("⚠️  Target column cannot be empty.", fg="yellow")
+            if not target_column:
+                click.secho("❌ No target column provided.", fg="red")
+                sys.exit(1)
+
+            target_found, corrected_target_column = is_target_in_file(
+                data_path, target_column, ssl_verify=ssl_verify
+            )
+            if target_found:
+                target_column = corrected_target_column
+            else:
+                click.secho(
+                    f"Error: The target column '{target_column}' is not present in the data file.",
+                    fg="red",
+                )
+                sys.exit(1)
+
+        # 8) Test size (default-friendly and robust to cancel)
+        test_size_answer = questionary.text(
+            "What percentage of data should be used for testing? (e.g. 0.2 for 20%)",
+            default="0.2",
+        ).ask()
+        if test_size_answer is None:
+            test_size = 0.2
+            click.secho("No input provided. Using default test size of 0.2", fg="yellow")
+        else:
+            try:
+                test_size = float(test_size_answer)
+                if not (0.1 <= test_size <= 0.5):
+                    click.echo("⚠️  Warning: Test size should typically be between 0.1 and 0.5")
+            except ValueError:
+                test_size = 0.2
+                click.echo("Invalid input, using default test size of 0.2")
+
+        # 9) Output dir (name validity handled in util; it returns a str always)
+        output_dir = get_validated_output_dir() or "output"
+
+        # 10) TPOT generations
+        generations = click.prompt(
+            "Please enter the number of TPOT generations", type=int, default=4
         )
-    except Exception as e:
-        click.secho(f"Error creating configuration: {e}", fg='red')
+
+        # 11) Build config
+        config_data = {
+            "data": {
+                "data_path": data_path,
+                "target_column": target_column,
+            },
+            "task": {"type": task_type},
+            "output_dir": output_dir,
+            "tpot": {"generations": generations},
+            "training": {"test_size": test_size, "random_state": 42},
+        }
+
+        # 12) Persist config
+        config_filename = save_configuration_safely(config_data, format, target_directory)
+        if not config_filename:
+            sys.exit(1)
+
+        # 13) Log & convenience script
+        log_artifact(config_filename)
+        create_convenience_script(target_directory)
+
+        elapsed_time = time.time() - start_time
+        click.secho(f"Configuration file created at: {config_filename}", fg="green")
+        logging.info("Configuration file created! (Time taken: %.2fs)", elapsed_time)
+
+        # 14) Friendly wrap-up guidance
+        if changed_directory:
+            activate_script_path = os.path.join(target_directory, "activate.sh")
+            click.secho(f"\n✅ Project initialized in: {target_directory}", fg="green", bold=True)
+            click.secho(f"⚠️  Your terminal is still in: {original_dir}", fg="yellow")
+            click.secho("\n💡 To move to your project directory, run:", fg="yellow")
+            click.secho(f"   cd {target_directory}", fg="cyan", bold=True)
+            click.secho("   # OR source the activation script:", fg="blue")
+            click.secho(f"   source {activate_script_path}", fg="cyan")
+        else:
+            click.secho("\n✅ Project initialized in current directory!", fg="green", bold=True)
+            click.secho("💡 You can now run commands like 'ml train'.", fg="yellow")
+
+        click.secho("\n📋 Available commands:", fg="blue")
+        click.secho("   ml eda        - Perform exploratory data analysis", fg="white")
+        click.secho("   ml train      - Train your model", fg="white")
+        click.secho("   ml serve      - Serve your model as an API", fg="white")
+        click.secho("   ml predict    - Make predictions", fg="white")
+        click.secho("   ml preprocess - Preprocess your data", fg="white")
+
+        logging.info("Original directory: %s", original_dir)
+        logging.info("Target directory: %s", target_directory)
+        logging.info("Changed directory: %s", changed_directory)
+
+    except KeyboardInterrupt:
+        click.secho("\n❌ Operation cancelled by user.", fg="yellow")
         sys.exit(1)
-
-    # Prepare configuration filename and log the action
-    config_filename = os.path.join(target_directory, f'config.{format}')
-    logging.info(f"Writing configuration to {config_filename}")
-
-    write_config(ml_config.model_dump(), format, config_filename)
-
-    # Log the generated configuration file as an artifact
-    log_artifact(config_filename)
-    
-    # Create a convenience script for easy navigation
-    create_convenience_script(target_directory)
-
-    end_time = time.time()  # End timing
-    elapsed_time = end_time - start_time
-    click.secho(f"Configuration file created at: {config_filename}", fg="green")
-    logging.info(f"Configuration file created! (Time taken: {elapsed_time:.2f}s)")
-    
-    # Get the current working directory
-    current_dir = os.getcwd()
-    
-    # Provide clear instructions based on whether we created a new directory
-    if created_new_directory:
-        activate_script_path = os.path.join(target_directory, 'activate.sh')
-        click.secho(f"\n✅ Project initialized in: {target_directory}", fg="green", bold=True)
-        click.secho(f"⚠️  Your terminal is still in: {original_dir}", fg="yellow")
-        click.secho(f"\n💡 To move to your project directory, run:", fg="yellow")
-        click.secho(f"   cd {target_directory}", fg="cyan", bold=True)
-        click.secho(f"   # OR source the activation script:", fg="blue")
-        click.secho(f"   source {activate_script_path}", fg="cyan")
-    else:
-        click.secho(f"\n✅ Project initialized in current directory!", fg="green", bold=True)
-        click.secho(f"💡 You can now run commands like 'ml train'.", fg="yellow")
-    
-    click.secho(f"\n📋 Available commands:", fg="blue")
-    click.secho(f"   ml eda       - Perform exploratory data analysis", fg="white")
-    click.secho(f"   ml train      - Train your model", fg="white")
-    click.secho(f"   ml serve      - Serve your model as an API", fg="white")
-    click.secho(f"   ml predict    - Make predictions", fg="white")
-    click.secho(f"   ml preprocess - Preprocess your data", fg="white")
-    
-    logging.info(f"Original directory: {original_dir}")
-    logging.info(f"Target directory: {target_directory}")
-    logging.info(f"Created new directory: {created_new_directory}")
+    except Exception as e:
+        logging.error("Unexpected error during initialization: %s", e)
+        click.secho(f"❌ Unexpected error: {str(e)}", fg="red")
+        click.secho("Please check the logs for more details.", fg="yellow")
+        sys.exit(1)

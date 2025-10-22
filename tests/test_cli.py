@@ -13,6 +13,7 @@ import tempfile
 import joblib
 import json
 import numpy as np
+from unittest.mock import patch
 
 def run_server(config_file):
     runner = CliRunner()
@@ -65,7 +66,7 @@ def test_predict_command():
 
             result = runner.invoke(cli, ["predict", "-i", "input.csv", "-o", "output.csv", "-m", output_dir])
             assert result.exit_code == 0
-            assert os.path.exists("output.csv")
+            assert os.path.exists(os.path.join(tmpdir, "output.csv"))
 
 def test_serve_command():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -94,6 +95,16 @@ def test_serve_command():
 
 @pytest.mark.skip(reason="Init command uses questionary which doesn't work well with CliRunner input")
 def test_init_command():
+@patch('ml_cli.commands.init.questionary.select')
+@patch('ml_cli.commands.init.questionary.confirm')
+def test_init_command(mock_confirm, mock_select):
+    # Configure the mocks to return predefined answers
+    mock_select.return_value.ask.side_effect = [
+        "current",          # For 'Where do you want to initialize the project?'
+        "classification"    # For 'Please select the task type:'
+    ]
+    mock_confirm.return_value.ask.return_value = True # For 'Did you mean X?'
+
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as tmpdir:
         with runner.isolated_filesystem(temp_dir=tmpdir):

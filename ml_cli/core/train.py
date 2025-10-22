@@ -4,6 +4,7 @@ import warnings
 import json
 import joblib
 import pandas as pd
+import click
 from tpot import TPOTClassifier, TPOTRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -52,21 +53,26 @@ def preprocess_categorical_data(data, target_column):
     if data_copy.isnull().any().any():
         logging.warning("Found NaN values after preprocessing, filling with 0")
         data_copy = data_copy.fillna(0)
-    
     return data_copy
 
-def train_model(data: pd.DataFrame, config: MLConfig):
+def train_model(data, config):
     """Train the model using TPOT."""
     try:
-        target_column = config.data.target_column
+        target_column = config['data']['target_column']
         
         # Preprocess categorical variables automatically
         data_processed = preprocess_categorical_data(data, target_column)
-        
+
         X = data_processed.drop(columns=[target_column])
         y = data_processed[target_column]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y,
+            test_size=test_size,
+            random_state=42,
+            stratify=y if config['task']['type'] == 'classification' else None
+        )
+
         # Save feature information for serving
         feature_info = {
             'feature_names': X.columns.tolist(),
@@ -74,9 +80,15 @@ def train_model(data: pd.DataFrame, config: MLConfig):
             'target_column': target_column,
             'task_type': config.task.type
         }
-        
+
+    except KeyError as e:
+        logging.error(f"Missing key in config: {e}")
+        raise
+    except ValueError as e:
+        logging.error(f"ValueError in data processing: {e}")
+        raise
     except Exception as e:
-        logging.error(f"Error processing data: {e}")
+        logging.error(f"Unexpected error during data processing: {e}")
         raise
 
     task_type = config.task.type
@@ -84,12 +96,12 @@ def train_model(data: pd.DataFrame, config: MLConfig):
     generations = tpot_config.get('generations', 4)
 
     if task_type == "classification":
-        model = TPOTClassifier(generations=generations, random_state=42, n_jobs=-1, verbosity=0)
+        model = TPOTClassifier(generations=generations, random_state=42, n_jobs=-1)
     elif task_type == "regression":
-        model = TPOTRegressor(generations=generations, random_state=42, n_jobs=-1, verbosity=0)
+        model = TPOTRegressor(generations=generations, random_state=42, n_jobs=-1)
     else:
         logging.error("Unsupported task type.")
-        raise ConfigurationError("Unsupported task type.")
+        raise ValueError("Unsupported task type.")
 
     try:
         logging.info("Starting TPOT optimization...")
@@ -97,14 +109,8 @@ def train_model(data: pd.DataFrame, config: MLConfig):
 
         output_dir = config.output_dir
         os.makedirs(output_dir, exist_ok=True)
-        
-        # Export the model pipeline
-        model_file_path = os.path.join(output_dir, 'best_model_pipeline.py')
-        model.export(model_file_path)
-        logging.info(f"Model pipeline exported to {model_file_path}")
-        log_artifact(model_file_path)
 
-        # Extract and save the fitted pipeline separately for serving
+        # Save fitted pipeline
         fitted_pipeline = model.fitted_pipeline_
         if fitted_pipeline is not None:
             pipeline_pkl_path = os.path.join(output_dir, 'fitted_pipeline.pkl')
@@ -114,29 +120,26 @@ def train_model(data: pd.DataFrame, config: MLConfig):
                 log_artifact(pipeline_pkl_path)
             except Exception as e:
                 logging.warning(f"Could not save fitted pipeline: {e}")
-                # This is not critical, we can fall back to the exported .py file
 
-        # Note: We don't save the TPOT model object directly because it often contains
-        # unpicklable components. Instead, we use the exported pipeline.
-        # The exported pipeline is a standalone sklearn pipeline that can be imported and used.
+        # Save feature metadata and model score
+        try:
+            score = fitted_pipeline.score(X_test, y_test) if fitted_pipeline else None
+            if score is not None:
+                feature_info['model_score'] = float(score)
+                logging.info(f"Model performance score: {score}")
 
-        # Save feature metadata
-        feature_info_path = os.path.join(output_dir, 'feature_info.json')
-        with open(feature_info_path, 'w') as f:
-            json.dump(feature_info, f, indent=2)
-        logging.info(f"Feature info saved to {feature_info_path}")
-        log_artifact(feature_info_path)
+            feature_info_path = os.path.join(output_dir, 'feature_info.json')
+            with open(feature_info_path, 'w') as f:
+                json.dump(feature_info, f, indent=2)
 
-        score = model.score(X_test, y_test)
-        print(f"Model performance score: {score}")
-        
-        # Save the test score in feature info for API reference
-        feature_info['model_score'] = float(score)
-        with open(feature_info_path, 'w') as f:
-            json.dump(feature_info, f, indent=2)
-        print(f"Model performance score: {score}")
+            logging.info(f"Feature info saved to {feature_info_path}")
+            log_artifact(feature_info_path)
+        except IOError as e:
+            logging.error(f"Error saving feature info: {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error while saving feature info: {e}")
 
-        print("TPOT optimization completed.")
+        logging.info("TPOT optimization completed.")
         return model
     except Exception as e:
         logging.error(f"Error during model training or exporting: {e}")
