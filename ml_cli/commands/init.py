@@ -40,7 +40,7 @@ Usage examples:
     default=True,
     help="Enable or disable SSL verification for data paths that are URLs. Default is enabled.",
 )
-def init(format, ssl_verify):
+def init(format: str, ssl_verify: bool):
     """Initialize a new configuration file (YAML or JSON)."""
     click.secho("Initializing configuration...", fg="green")
 

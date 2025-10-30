@@ -13,6 +13,7 @@ import joblib
 import json
 import numpy as np
 from unittest.mock import patch
+import pytest
 
 def run_server(config_file):
     runner = CliRunner()
@@ -24,7 +25,7 @@ def test_train_command():
         with runner.isolated_filesystem(temp_dir=tmpdir):
             # Create a dummy config.yaml file
             with open("config.yaml", "w") as f:
-                f.write(f"data:\n  data_path: data.csv\n  target_column: target\ntask:\n  type: classification\noutput_dir: {tmpdir}/output")
+                f.write(f"data:\n  data_path: data.csv\n  target_column: target\ntask:\n  type: classification\noutput_dir: {tmpdir}/output\ntpot:\n  generations: 1")
 
             # Create a dummy data.csv file
             data = pd.DataFrame({
@@ -37,7 +38,7 @@ def test_train_command():
 
             result = runner.invoke(cli, ["train", "--config", "config.yaml"])
             assert result.exit_code == 0
-            assert os.path.exists(f"{tmpdir}/output/best_model_pipeline.py")
+            assert os.path.exists(f"{tmpdir}/output/fitted_pipeline.pkl")
 
 def test_predict_command():
     runner = CliRunner()
@@ -64,32 +65,47 @@ def test_predict_command():
 
             result = runner.invoke(cli, ["predict", "-i", "input.csv", "-o", "output.csv", "-m", output_dir])
             assert result.exit_code == 0
-            assert os.path.exists(os.path.join(tmpdir, "output.csv"))
+            assert os.path.exists("output.csv")
 
+@pytest.mark.timeout(30)
 def test_serve_command():
+    import socket
+    def wait_for_port(host, port, timeout=10.0):
+        """Wait until a port starts accepting TCP connections."""
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                with socket.create_connection((host, port), timeout=1):
+                    return True
+            except OSError:
+                time.sleep(0.2)
+        return False
+
     with tempfile.TemporaryDirectory() as tmpdir:
         config_file = os.path.join(tmpdir, "config.yaml")
         with open(config_file, "w") as f:
             f.write(f"output_dir: {tmpdir}/output")
-        
         server_process = multiprocessing.Process(target=run_server, args=(config_file,))
         server_process.start()
-        time.sleep(5)  # Wait for the server to start
-
+        assert wait_for_port("127.0.0.1", 8000, timeout=10), "Server did not start in time"
         try:
-            # Test the root endpoint
-            response = requests.get("http://127.0.0.1:8000")
+            response = requests.get("http://127.0.0.1:8000", timeout=3)
             assert response.status_code == 200
-            assert response.json() == {"message": "Welcome to the ML-CLI API!"}
+            data = response.json()
+            assert "status" in data
+            assert data["status"] == "operational"
 
-            # Test the health endpoint
-            response = requests.get("http://127.0.0.1:8000/health")
+            response = requests.get("http://127.0.0.1:8000/health", timeout=3)
             assert response.status_code == 200
-            assert response.json() == {"status": "ok"}
-
+            health_data = response.json()
+            assert "checks" in health_data
+            assert health_data["checks"]["api"] == "healthy"
         finally:
             server_process.terminate()
-            server_process.join()
+            server_process.join(timeout=5)
+            if server_process.is_alive():
+                server_process.kill()
+                server_process.join()
 
 @patch('ml_cli.commands.init.questionary.select')
 @patch('ml_cli.commands.init.questionary.confirm')

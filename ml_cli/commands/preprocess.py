@@ -14,7 +14,7 @@ Usage example:
 """)
 @click.option('--config', '-c', 'config_file', default="config.yaml",
               help='The absolute or relative path to the configuration file (config.yaml or config.json) that specifies data paths and preprocessing steps.')
-def preprocess(config_file):
+def preprocess(config_file: str):
     """Preprocess the dataset to handle non-numeric columns using OneHotEncoder."""
     click.secho("Preprocessing data...", fg="green")
 

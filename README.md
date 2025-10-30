@@ -6,6 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PyPI Version](https://img.shields.io/badge/pypi-v0.1.0-orange.svg)](https://pypi.org/project/ml-cli/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
+[![codecov](https://codecov.io/gh/Ayo-Cyber/ml_cli/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayo-Cyber/ml_cli)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 **A comprehensive command-line interface for end-to-end machine learning workflows**

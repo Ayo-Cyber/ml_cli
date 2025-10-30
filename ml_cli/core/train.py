@@ -13,7 +13,7 @@ from ml_cli.utils.utils import log_artifact
 # Suppress the torch warning from TPOT
 warnings.filterwarnings("ignore", message="Warning: optional dependency `torch` is not available.*")
 
-def preprocess_categorical_data(data, target_column):
+def preprocess_categorical_data(data: pd.DataFrame, target_column: str):
     """Preprocess categorical data for TPOT training."""
     data_copy = data.copy()
     
@@ -53,7 +53,7 @@ def preprocess_categorical_data(data, target_column):
         data_copy = data_copy.fillna(0)
     return data_copy
 
-def train_model(data, config, test_size=None):
+def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
     """Train the model using TPOT."""
     try:
         target_column = config['data']['target_column']

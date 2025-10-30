@@ -18,7 +18,7 @@ Usage examples:
               help="Path to the configuration file (YAML or JSON).")
 @click.option('--config', '-c', 'config_file', default="config.yaml",
               help='The absolute or relative path to the configuration file (config.yaml or config.json) that defines the training parameters, data paths, and model settings.')
-def train(config_file):
+def train(config_file: str):
     """Train the ML model based on the configuration."""
     click.secho("Training ML model...", fg="green")
 

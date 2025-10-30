@@ -54,7 +54,7 @@ setup(
         "gunicorn>=20.1.0",
         "Jinja2>=3.0.0,<4.0.0",
         "itsdangerous>=2.0.0,<3.0.0",
-        "python-jose>=3.3.0,<4.0.0",
+        "python-dotenv>=0.19.0,<1.0.0",
         "passlib>=1.7.0,<2.0.0",
         "bcrypt>=3.2.0,<5.0.0",
         "SQLAlchemy>=1.4.0,<3.0.0",

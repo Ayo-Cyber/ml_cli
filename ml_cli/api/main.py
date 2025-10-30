@@ -44,6 +44,18 @@ def startup_event():
         logging.error(f"Error during model startup: {e}")
         # Don't fail startup, but log the error
 
+@app.get("/")
+def root():
+    """Welcome message and API status"""
+    return {
+        "message": "Welcome to the ML-CLI API!",
+        "docs": "/docs",
+        "health": "/health",
+        "model_info": "/model-info",
+        "status": "operational" if pipeline is not None else "model_not_loaded",
+        "name": "ML-CLI API"
+    }
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "model_loaded": pipeline is not None}

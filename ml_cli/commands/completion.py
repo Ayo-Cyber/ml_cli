@@ -2,7 +2,7 @@ import rich_click as click
 
 @click.command()
 @click.argument('shell', type=click.Choice(['bash', 'zsh', 'fish']))
-def completion(shell):
+def completion(shell: str):
     """Show the shell completion setup instructions."""
     prog_name = 'ml-cli'
     if shell == 'bash':

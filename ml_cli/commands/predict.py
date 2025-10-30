@@ -3,6 +3,7 @@ import pandas as pd
 import joblib
 import json
 import os
+import logging
 
 @click.command(help="""Make predictions on new data using a trained model.
 
@@ -16,7 +17,7 @@ Usage example:
               help='The absolute or relative path where the generated predictions (as a CSV file) will be saved.')
 @click.option('--model-path', '-m', type=click.Path(exists=True), required=True,
               help='The absolute or relative path to the directory containing the trained model (e.g., "fitted_pipeline.pkl") and feature information ("feature_info.json").')
-def predict(input_path, output_path, model_path):
+def predict(input_path: str, output_path: str, model_path: str):
     """Make predictions on new data using a trained model."""
     click.secho("Making predictions...", fg="green")
 

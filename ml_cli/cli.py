@@ -1,6 +1,10 @@
 import warnings
 import rich_click as click
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(

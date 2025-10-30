@@ -28,7 +28,7 @@ API Endpoints:
               help="Enable or disable auto-reloading of the server when code changes are detected. Useful for development. (Default: True)")
 @click.option('--config', '-c', 'config_file', default="config.yaml",
               help='The absolute or relative path to the configuration file (config.yaml or config.json) used to determine the model output directory.')
-def serve(host, port, reload, config_file):
+def serve(host: str, port: int, reload: bool, config_file: str):
     """Serve the ML model as a REST API using FastAPI."""
     
     output_dir = "output"

@@ -34,3 +34,4 @@ greenlet>=1.1.0,<4.0.0
 pydantic-settings>=2.0.0,<3.0.0
 certifi>=2021.0.0
 pyarrow>=10.0.0,<16.0.0
+pytest-cov>=2.0.0,<3.0.0
