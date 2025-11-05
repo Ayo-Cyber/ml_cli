@@ -1,12 +1,12 @@
 setuptools>=65.0.0
-pandas>=2.0.0,<2.3.0
+pandas
 click>=8.0.0,<9.0.0
 rich-click>=1.6.0,<2.0.0
 pyyaml>=6.0.0,<7.0.0
 questionary>=1.10.0,<3.0.0
 tqdm>=4.60.0,<5.0.0
 rich>=12.0.0,<14.0.0
-numpy>=1.21.0,<2.0.0
+numpy
 configparser>=5.0.0,<8.0.0
 python-dotenv>=0.19.0,<2.0.0
 requests>=2.25.0,<3.0.0
@@ -17,7 +17,7 @@ uvicorn>=0.20.0,<1.0.0
 scikit-learn>=1.1.0,<2.0.0
 joblib>=1.1.0,<2.0.0
 # torch>=2.0.0,<3.0.0
-tpot>=0.12.0,<2.0.0
+tpot
 matplotlib>=3.5.0,<4.0.0
 seaborn>=0.11.0,<1.0.0
 python-multipart>=0.0.5
@@ -33,5 +33,5 @@ alembic>=1.7.0,<2.0.0
 greenlet>=1.1.0,<4.0.0
 pydantic-settings>=2.0.0,<3.0.0
 certifi>=2021.0.0
-pyarrow>=10.0.0,<16.0.0
+pyarrow
 pytest-cov>=2.0.0,<3.0.0
