@@ -201,7 +201,7 @@ def init(format: str, ssl_verify: bool):
         click.secho("\n❌ Operation cancelled by user.", fg="yellow")
         sys.exit(1)
     except Exception as e:
-        logging.error("Unexpected error during initialization: %s", e)
+        logging.error("Unexpected error during initialization: %s", e, exc_info=True)
         click.secho(f"❌ Unexpected error: {str(e)}", fg="red")
         click.secho("Please check the logs for more details.", fg="yellow")
         sys.exit(1)

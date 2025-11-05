@@ -137,6 +137,7 @@ def write_config(config_data, format, config_filename):
     NOTE: no sys.exit here; raise on error so callers can handle.
     """
     try:
+        logging.info(f"Attempting to write configuration to {config_filename} in {format} format.")
         with open(config_filename, "w", encoding="utf-8") as config_file:
             if format == "yaml":
                 yaml.safe_dump(config_data, config_file, sort_keys=False)
@@ -144,8 +145,15 @@ def write_config(config_data, format, config_filename):
                 json.dump(config_data, config_file, indent=4)
             else:
                 raise ValueError("Unsupported config format. Use 'yaml' or 'json'.")
+        logging.info(f"Configuration successfully written to {config_filename}.")
+    except ValueError as ve:
+        logging.error(f"Unsupported format error: {ve}")
+        raise
+    except IOError as ioe:
+        logging.error(f"I/O error while writing to {config_filename}: {ioe}")
+        raise
     except Exception as e:
-        logging.error(f"Failed to write config file: {e}")
+        logging.error(f"Unexpected error while writing config file: {e}")
         raise
 
 
@@ -756,57 +764,6 @@ def get_validated_output_dir():
                 return "output"
 
     return "output"
-
-def convert_numpy_types(obj):
-    """Convert NumPy types to native Python types for JSON serialization"""
-    if isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    elif isinstance(obj, np.bool_):
-        return bool(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif isinstance(obj, (list, tuple)):
-        return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, dict):
-        return {key: convert_numpy_types(value) for key, value in obj.items()}
-    else:
-        return obj
-
-def format_prediction_response(prediction, feature_info, probabilities=None):
-    """Format prediction response based on task type"""
-    task_type = feature_info.get("task_type", "unknown").lower()
-    
-    # Convert prediction to native Python type
-    prediction_value = convert_numpy_types(prediction[0]) if len(prediction) > 0 else None
-    
-    result = {
-        "prediction": prediction_value,
-        "task_type": task_type,
-    }
-    
-    # Add task-specific information
-    if task_type == "classification":
-        if probabilities is not None:
-            result["probabilities"] = convert_numpy_types(probabilities)
-            result["confidence"] = float(max(probabilities)) if probabilities else None
-        
-        # For classification, add class information if available
-        target_column = feature_info.get("target_column")
-        if target_column:
-            result["predicted_class"] = prediction_value
-            
-    elif task_type == "regression":
-        # For regression, the prediction is the actual value
-        result["predicted_value"] = prediction_value
-        
-    elif task_type == "clustering":
-        # For clustering, prediction is the cluster ID
-        result["cluster_id"] = prediction_value
-        result["cluster"] = f"Cluster_{prediction_value}"
-    
-    return result
 
 
 def is_valid_directory_name(name):

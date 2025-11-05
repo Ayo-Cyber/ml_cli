@@ -14,22 +14,26 @@ logging.basicConfig(
 )
 
 # Suppress the torch warning from TPOT before any imports
-warnings.filterwarnings("ignore", message="Warning: optional dependency `torch` is not available.*")
+warnings.filterwarnings(
+    "ignore",
+    message="Warning: optional dependency `torch` is not available.*"
+)
 
-from ml_cli.commands.init import init 
+from ml_cli.commands.init import init  # noqa: E402
+from ml_cli.commands.eda import eda  # noqa: E402
+from ml_cli.commands.preprocess import preprocess  # noqa: E402
+from ml_cli.commands.clean import clean  # noqa: E402
+from ml_cli.commands.train import train  # noqa: E402
+from ml_cli.commands.predict import predict  # noqa: E402
+from ml_cli.commands.serve import serve  # noqa: E402
+from ml_cli.commands.completion import completion  # noqa: E402
 
-from ml_cli.commands.eda import eda
-from ml_cli.commands.preprocess import preprocess
-from ml_cli.commands.clean import clean
-from ml_cli.commands.train import train
-from ml_cli.commands.predict import predict
-from ml_cli.commands.serve import serve
-from ml_cli.commands.completion import completion
 
 @click.group()
 def cli():
     """Main ML-CLI application entry point."""
     pass
+
 
 # Register the commands
 cli.add_command(init)

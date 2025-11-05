@@ -4,9 +4,22 @@ import os
 from click.testing import CliRunner
 from ml_cli.cli import cli
 import pandas as pd
+from unittest.mock import patch
 
-def test_full_ml_pipeline():
+
+@patch('ml_cli.commands.init.questionary.text')
+@patch('ml_cli.commands.init.questionary.select')
+@patch('ml_cli.commands.init.questionary.confirm')
+def test_full_ml_pipeline(mock_confirm, mock_select, mock_text):
     """Integration test for the complete ML pipeline: init -> eda -> preprocess -> train -> predict"""
+    # Configure the mocks to return predefined answers
+    mock_select.return_value.ask.side_effect = [
+        "current",          # For 'Where do you want to initialize the project?'
+        "classification"    # For 'Please select the task type:'
+    ]
+    mock_confirm.return_value.ask.return_value = True  # For 'Did you mean X?'
+    mock_text.return_value.ask.return_value = "0.2"  # For test size
+    
     runner = CliRunner()
 
     with tempfile.TemporaryDirectory() as tmpdir:

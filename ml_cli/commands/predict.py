@@ -41,7 +41,9 @@ def predict(input_path: str, output_path: str, model_path: str):
         predictions = pipeline.predict(new_data)
 
         # Save the predictions
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        output_dir = os.path.dirname(output_path)
+        if output_dir:  # Only create directory if path has a directory component
+            os.makedirs(output_dir, exist_ok=True)
         pd.DataFrame(predictions, columns=['predictions']).to_csv(output_path, index=False)
 
         click.secho(f"Predictions saved to {output_path}", fg="green")
