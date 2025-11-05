@@ -97,17 +97,43 @@ def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
 
     task_type = config["task"]["type"]
     tpot_config = config.get("tpot", {})
+    
+    # Get TPOT parameters with optimized defaults
     generations = tpot_config.get("generations", 4)
+    population_size = tpot_config.get("population_size", 20)  # Default 100 is too slow
+    max_time_mins = tpot_config.get("max_time_mins", 5)
+    cv_folds = tpot_config.get("cv_folds", 3)  # Default 5 is too slow
+    n_jobs = tpot_config.get("n_jobs", 1)  # Use 1 to avoid Dask issues, or set higher manually
+    
+    # Build TPOT kwargs
+    tpot_kwargs = {
+        "generations": generations,
+        "population_size": population_size,
+        "max_time_mins": max_time_mins,
+        "cv": cv_folds,
+        "n_jobs": n_jobs,
+        "random_state": 42,
+        "verbose": 2,  # Show generation progress
+    }
+    
+    click.echo(f"\n🔧 TPOT Configuration:")
+    click.echo(f"   Generations: {generations}")
+    click.echo(f"   Population size: {population_size}")
+    click.echo(f"   Max time: {max_time_mins} minutes")
+    click.echo(f"   Cross-validation folds: {cv_folds}")
+    click.echo(f"   Parallel jobs: {n_jobs}")
+    click.echo()
 
     if task_type == "classification":
-        model = TPOTClassifier(generations=generations, random_state=42)
+        model = TPOTClassifier(**tpot_kwargs)
     elif task_type == "regression":
-        model = TPOTRegressor(generations=generations, random_state=42)
+        model = TPOTRegressor(**tpot_kwargs)
     else:
         raise ValueError("Unsupported task type.")
 
     try:
         logging.info("Starting TPOT optimization...")
+        click.echo("🚀 Starting TPOT AutoML optimization...\n")
         model.fit(X_train, y_train)
 
         output_dir = config.get("output_dir", "output")

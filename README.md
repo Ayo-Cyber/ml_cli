@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PyPI Version](https://img.shields.io/badge/pypi-v0.1.0-orange.svg)](https://pypi.org/project/ml-cli/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
@@ -63,7 +63,7 @@ Built with modern Python technologies including **FastAPI**, **TPOT AutoML**, an
 ## 🛠️ Installation
 
 ### Prerequisites
-- Python 3.9 or higher
+- Python 3.10 or higher
 - pip (Python package installer)
 
 ### Quick Install
@@ -221,6 +221,21 @@ ml train [OPTIONS]
 **Options:**
 - `--config, -c PATH` - Configuration file path (default: config.yaml)
 
+**TPOT Configuration (in config.yaml):**
+```yaml
+tpot:
+  generations: 4          # Number of optimization iterations
+  population_size: 20     # Pipelines per generation (lower = faster)
+  max_time_mins: 5        # Hard time limit
+  cv_folds: 3            # Cross-validation folds (lower = faster)
+  n_jobs: 1              # Parallel jobs (1 = no parallelization)
+```
+
+**Performance Tips:**
+- For **quick testing**: `generations: 1-2`, `population_size: 10`
+- For **balanced training**: `generations: 4`, `population_size: 20` (default)
+- For **production**: `generations: 10`, `population_size: 50`
+
 **Outputs:**
 - `fitted_pipeline.pkl` - Serialized model
 - `best_model_pipeline.py` - Exportable Python script
@@ -293,6 +308,9 @@ output_dir: 'output'
 tpot:
   generations: 4
   population_size: 20
+  max_time_mins: 5
+  cv_folds: 3
+  n_jobs: 1
   verbosity: 2
 
 training:
