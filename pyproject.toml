@@ -38,3 +38,14 @@ ml = "ml_cli.cli:cli"
 where = ["."]
 include = ["ml_cli*"]
 exclude = ["tests*", "docs*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "timeout: marks tests with timeout limits",
+]
+addopts = "-v"

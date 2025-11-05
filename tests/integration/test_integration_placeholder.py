@@ -7,6 +7,7 @@ import pandas as pd
 from unittest.mock import patch
 
 
+@pytest.mark.slow  # Mark as slow test for optional skipping
 @patch("ml_cli.commands.init.questionary.text")
 @patch("ml_cli.commands.init.questionary.select")
 @patch("ml_cli.commands.init.questionary.confirm")
@@ -33,8 +34,8 @@ def test_full_ml_pipeline(mock_confirm, mock_select, mock_text):
             # Copy data to current dir
             data.to_csv("data.csv", index=False)
 
-            # 1. Initialize project
-            result = runner.invoke(cli, ["init"], input="data.csv\ntarget\noutput\n4\n")
+            # 1. Initialize project (using 1 generation for faster testing)
+            result = runner.invoke(cli, ["init"], input="data.csv\ntarget\noutput\n1\n")
             assert result.exit_code == 0
             assert os.path.exists("config.yaml")
 

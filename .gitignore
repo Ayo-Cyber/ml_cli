@@ -8,3 +8,5 @@ heart.csv
 acme
 .pytest_cache/
 test.py
+.env
+output/

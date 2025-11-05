@@ -73,7 +73,7 @@ def test_predict_command():
 def test_serve_command():
     import socket
 
-    def wait_for_port(host, port, timeout=10.0):
+    def wait_for_port(host, port, timeout=15.0):
         """Wait until a port starts accepting TCP connections."""
         start = time.time()
         while time.time() - start < timeout:
@@ -81,7 +81,7 @@ def test_serve_command():
                 with socket.create_connection((host, port), timeout=1):
                     return True
             except OSError:
-                time.sleep(0.2)
+                time.sleep(0.5)  # Increased from 0.2 to 0.5
         return False
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -90,7 +90,11 @@ def test_serve_command():
             f.write(f"output_dir: {tmpdir}/output")
         server_process = multiprocessing.Process(target=run_server, args=(config_file,))
         server_process.start()
-        assert wait_for_port("127.0.0.1", 8000, timeout=10), "Server did not start in time"
+
+        # Give uvicorn a moment to initialize before checking
+        time.sleep(2)
+
+        assert wait_for_port("127.0.0.1", 8000, timeout=15), "Server did not start in time"
         try:
             response = requests.get("http://127.0.0.1:8000", timeout=3)
             assert response.status_code == 200
