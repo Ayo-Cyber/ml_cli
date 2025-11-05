@@ -3,18 +3,10 @@ import logging
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.openapi.utils import get_openapi
-from ml_cli.utils.utils import (
-    load_model,
-    get_config_output_dir,
-    format_prediction_response
-)
+from ml_cli.utils.utils import load_model, get_config_output_dir, format_prediction_response
 
 # Create the FastAPI app
-app = FastAPI(
-    title="ML-CLI API",
-    description="API for ML model predictions with dynamic examples",
-    version="1.0.0"
-)
+app = FastAPI(title="ML-CLI API", description="API for ML model predictions with dynamic examples", version="1.0.0")
 
 # Global variables for this module
 pipeline = None
@@ -34,8 +26,7 @@ def startup_event():
     try:
         # Load model using utils function
         result = load_model(output_dir)
-        loaded_pipeline, loaded_feature_info, loaded_payload_model, \
-            loaded_sample_input = result
+        loaded_pipeline, loaded_feature_info, loaded_payload_model, loaded_sample_input = result
 
         # Set globals in this module
         pipeline = loaded_pipeline
@@ -58,10 +49,8 @@ def root():
         "docs": "/docs",
         "health": "/health",
         "model_info": "/model-info",
-        "status": (
-            "operational" if pipeline is not None else "model_not_loaded"
-        ),
-        "name": "ML-CLI API"
+        "status": ("operational" if pipeline is not None else "model_not_loaded"),
+        "name": "ML-CLI API",
     }
 
 
@@ -109,10 +98,7 @@ def predict(payload: dict = Body(...)):
         missing_features = [f for f in feature_names if f not in payload]
         # Fixed: avoid ambiguous array truth value
         if len(missing_features) > 0:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Missing required features: {missing_features}"
-            )
+            raise HTTPException(status_code=400, detail=f"Missing required features: {missing_features}")
 
         # Create DataFrame from payload with explicit dtype handling
         try:
@@ -122,45 +108,32 @@ def predict(payload: dict = Body(...)):
             # columns gracefully
             for col in feature_names:
                 if col not in input_df.columns:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Missing feature: {col}"
-                    )
+                    raise HTTPException(status_code=400, detail=f"Missing feature: {col}")
 
             input_df = input_df[feature_names]
 
             # Convert to numeric where possible to avoid type issues
             for col in input_df.columns:
                 try:
-                    input_df[col] = pd.to_numeric(
-                        input_df[col],
-                        errors='ignore'
-                    )
+                    input_df[col] = pd.to_numeric(input_df[col], errors="ignore")
                 except Exception:
                     pass  # Keep original type if conversion fails
 
         except Exception as e:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Error creating input DataFrame: {str(e)}"
-            )
+            raise HTTPException(status_code=400, detail=f"Error creating input DataFrame: {str(e)}")
 
         # Make prediction with error handling
         try:
             prediction = pipeline.predict(input_df)
         except Exception as e:
             logging.error(f"Pipeline prediction error: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Model prediction failed: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Model prediction failed: {str(e)}")
 
         # Get prediction probabilities if available (for classification)
         probabilities = None
         task_type = feature_info.get("task_type", "").lower()
 
-        if (task_type == "classification"
-                and hasattr(pipeline, "predict_proba")):
+        if task_type == "classification" and hasattr(pipeline, "predict_proba"):
             try:
                 proba = pipeline.predict_proba(input_df)
                 if proba is not None and len(proba) > 0:
@@ -169,11 +142,7 @@ def predict(payload: dict = Body(...)):
                 logging.warning(f"Could not get probabilities: {e}")
 
         # Format response based on task type
-        result = format_prediction_response(
-            prediction,
-            feature_info,
-            probabilities
-        )
+        result = format_prediction_response(prediction, feature_info, probabilities)
 
         # Add input features for reference
         result["input_features"] = payload
@@ -184,10 +153,7 @@ def predict(payload: dict = Body(...)):
         raise  # Re-raise HTTP exceptions
     except Exception as e:
         logging.error(f"Prediction error: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Prediction error: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"Prediction error: {str(e)}")
 
 
 @app.get("/predict/batch", summary="Get batch prediction example")
@@ -196,12 +162,7 @@ def get_batch_prediction_example():
     if sample_input_for_docs is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    return {
-        "examples": [
-            sample_input_for_docs,
-            sample_input_for_docs  # You could modify this to show variation
-        ]
-    }
+    return {"examples": [sample_input_for_docs, sample_input_for_docs]}  # You could modify this to show variation
 
 
 @app.post("/predict/batch")
@@ -215,32 +176,21 @@ def predict_batch(payload: dict = Body(...)):
         # dictionaries
         if "samples" not in payload:
             raise HTTPException(
-                status_code=400,
-                detail="Payload must contain 'samples' key with list "
-                       "of feature dictionaries"
+                status_code=400, detail="Payload must contain 'samples' key with list " "of feature dictionaries"
             )
 
         samples = payload["samples"]
         if not isinstance(samples, list) or len(samples) == 0:
-            raise HTTPException(
-                status_code=400,
-                detail="'samples' must be a non-empty list"
-            )
+            raise HTTPException(status_code=400, detail="'samples' must be a non-empty list")
 
         feature_names = feature_info.get("feature_names", [])
 
         # Validate all samples
         for i, sample in enumerate(samples):
-            missing_features = [
-                f for f in feature_names if f not in sample
-            ]
+            missing_features = [f for f in feature_names if f not in sample]
             # Fixed: avoid ambiguous array truth value
             if len(missing_features) > 0:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Sample {i} missing required features: "
-                           f"{missing_features}"
-                )
+                raise HTTPException(status_code=400, detail=f"Sample {i} missing required features: " f"{missing_features}")
 
         # Create DataFrame from all samples
         try:
@@ -250,35 +200,25 @@ def predict_batch(payload: dict = Body(...)):
             # Convert to numeric where possible
             for col in input_df.columns:
                 try:
-                    input_df[col] = pd.to_numeric(
-                        input_df[col],
-                        errors='ignore'
-                    )
+                    input_df[col] = pd.to_numeric(input_df[col], errors="ignore")
                 except Exception:
                     pass
 
         except Exception as e:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Error creating batch DataFrame: {str(e)}"
-            )
+            raise HTTPException(status_code=400, detail=f"Error creating batch DataFrame: {str(e)}")
 
         # Make predictions
         try:
             predictions = pipeline.predict(input_df)
         except Exception as e:
             logging.error(f"Batch prediction error: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Batch prediction failed: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}")
 
         # Get probabilities if available
         probabilities = None
         task_type = feature_info.get("task_type", "").lower()
 
-        if (task_type == "classification"
-                and hasattr(pipeline, "predict_proba")):
+        if task_type == "classification" and hasattr(pipeline, "predict_proba"):
             try:
                 probabilities = pipeline.predict_proba(input_df)
             except Exception as e:
@@ -293,20 +233,13 @@ def predict_batch(payload: dict = Body(...)):
             result["sample_index"] = i
             results.append(result)
 
-        return {
-            "predictions": results,
-            "total_samples": len(samples),
-            "task_type": task_type
-        }
+        return {"predictions": results, "total_samples": len(samples), "task_type": task_type}
 
     except HTTPException:
         raise  # Re-raise HTTP exceptions
     except Exception as e:
         logging.error(f"Batch prediction error: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Batch prediction error: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"Batch prediction error: {str(e)}")
 
 
 def custom_openapi():
@@ -325,12 +258,7 @@ def custom_openapi():
         predict_path = openapi_schema["paths"].get("/predict")
         if predict_path and "post" in predict_path:
             predict_path["post"]["requestBody"] = {
-                "content": {
-                    "application/json": {
-                        "schema": {"type": "object"},
-                        "example": sample_input_for_docs
-                    }
-                }
+                "content": {"application/json": {"schema": {"type": "object"}, "example": sample_input_for_docs}}
             }
 
         # Add example for batch prediction
@@ -340,12 +268,7 @@ def custom_openapi():
                 "content": {
                     "application/json": {
                         "schema": {"type": "object"},
-                        "example": {
-                            "samples": [
-                                sample_input_for_docs,
-                                sample_input_for_docs
-                            ]
-                        }
+                        "example": {"samples": [sample_input_for_docs, sample_input_for_docs]},
                     }
                 }
             }

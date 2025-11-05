@@ -46,6 +46,7 @@ sample_input_for_docs: Dict[str, Any] | None = None
 # Internal helpers (no public API changes)
 # -----------------------------------------------------------------------------
 
+
 def _has_allowed_extension(path_like: str) -> bool:
     return Path(path_like).suffix.lower() in VALID_EXTENSIONS
 
@@ -131,6 +132,7 @@ def _read_dataframe(data_path: str, ssl_verify: bool = True) -> pd.DataFrame:
 # -----------------------------------------------------------------------------
 # Public functions (names unchanged)
 # -----------------------------------------------------------------------------
+
 
 def write_config(config_data, format, config_filename):
     """Write configuration data to a file in the specified format (YAML or JSON).
@@ -268,9 +270,7 @@ def is_target_in_file(data_path, target_column, ssl_verify=True):
                 logging.info(f"User accepted suggested column: '{suggested_column}'.")
                 return True, suggested_column
 
-        logging.warning(
-            f"Target column '{target_column}' not found in data. Suggested: '{suggested_column}'"
-        )
+        logging.warning(f"Target column '{target_column}' not found in data. Suggested: '{suggested_column}'")
         return False, None
 
     except FileNotFoundError:
@@ -530,9 +530,9 @@ def get_config_output_dir(config_path: str = "config.yaml") -> str:
     output_dir = "output"
     if os.path.exists(config_path):
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 config = yaml.safe_load(f)
-                output_dir = config.get('output_dir', 'output')
+                output_dir = config.get("output_dir", "output")
         except yaml.YAMLError as exc:
             logging.error(f"Error loading config file: {exc}")
     return output_dir
@@ -634,12 +634,10 @@ def get_validated_data_path_input(ssl_verify):
 
     for attempt in range(1, max_attempts + 1):
         try:
-            data_path_input = (
-                click.prompt(
-                    f"📊 Please enter the data file path or URL (attempt {attempt}/{max_attempts})",
-                    type=str,
-                ).strip()
-            )
+            data_path_input = click.prompt(
+                f"📊 Please enter the data file path or URL (attempt {attempt}/{max_attempts})",
+                type=str,
+            ).strip()
 
             if not data_path_input:
                 click.secho("⚠️  Data path cannot be empty.", fg="yellow")
@@ -731,13 +729,11 @@ def get_validated_output_dir():
 
     for attempt in range(1, max_attempts + 1):
         try:
-            output_dir = (
-                click.prompt(
-                    f"📁 Please enter the output directory path (attempt {attempt}/{max_attempts})",
-                    type=str,
-                    default="output",
-                ).strip()
-            )
+            output_dir = click.prompt(
+                f"📁 Please enter the output directory path (attempt {attempt}/{max_attempts})",
+                type=str,
+                default="output",
+            ).strip()
 
             if not output_dir:
                 click.secho("⚠️  Output directory cannot be empty, using default 'output'.", fg="yellow")
@@ -747,7 +743,7 @@ def get_validated_output_dir():
                 return output_dir
             else:
                 click.secho(f"❌ Invalid directory name: '{output_dir}'", fg="red")
-                click.secho("Directory names cannot contain: < > : \" | ? * or control characters", fg="yellow")
+                click.secho('Directory names cannot contain: < > : " | ? * or control characters', fg="yellow")
                 if attempt < max_attempts:
                     continue
                 else:
@@ -798,17 +794,19 @@ def convert_numpy_types(obj):
     else:
         return obj
 
+
 def safe_array_check(arr):
     """Safely check if array/list has elements"""
     try:
-        return len(arr) > 0 if hasattr(arr, '__len__') else arr is not None
+        return len(arr) > 0 if hasattr(arr, "__len__") else arr is not None
     except:
         return False
+
 
 def format_prediction_response(prediction, feature_info, probabilities=None):
     """Format prediction response based on task type"""
     task_type = feature_info.get("task_type", "unknown").lower()
-    
+
     # Safely get prediction value
     prediction_value = None
     if safe_array_check(prediction):
@@ -816,31 +814,31 @@ def format_prediction_response(prediction, feature_info, probabilities=None):
             prediction_value = convert_numpy_types(prediction[0])
         except (IndexError, TypeError):
             prediction_value = convert_numpy_types(prediction)
-    
+
     result = {
         "prediction": prediction_value,
         "task_type": task_type,
     }
-    
+
     # Add task-specific information
     if task_type == "classification":
         if probabilities is not None and safe_array_check(probabilities):
             prob_list = convert_numpy_types(probabilities)
             result["probabilities"] = prob_list
             result["confidence"] = float(max(prob_list)) if isinstance(prob_list, list) and prob_list else None
-        
+
         # For classification, add class information if available
         target_column = feature_info.get("target_column")
         if target_column:
             result["predicted_class"] = prediction_value
-            
+
     elif task_type == "regression":
         # For regression, the prediction is the actual value
         result["predicted_value"] = prediction_value
-        
+
     elif task_type == "clustering":
         # For clustering, prediction is the cluster ID
         result["cluster_id"] = prediction_value
         result["cluster"] = f"Cluster_{prediction_value}" if prediction_value is not None else "Unknown"
-    
+
     return result

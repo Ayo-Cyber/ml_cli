@@ -8,16 +8,11 @@ load_dotenv()
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
 )
 
 # Suppress the torch warning from TPOT before any imports
-warnings.filterwarnings(
-    "ignore",
-    message="Warning: optional dependency `torch` is not available.*"
-)
+warnings.filterwarnings("ignore", message="Warning: optional dependency `torch` is not available.*")
 
 from ml_cli.commands.init import init  # noqa: E402
 from ml_cli.commands.eda import eda  # noqa: E402

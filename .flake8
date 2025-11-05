@@ -11,11 +11,11 @@ exclude =
     .tox,
     .eggs
 ignore = 
-    E501,  # line too long (we set max-line-length to 120)
-    W503,  # line break before binary operator (conflicts with W504)
-    W504,  # line break after binary operator
-    W293,  # blank line contains whitespace
-    W291,  # trailing whitespace
+    E501,
+    W503,
+    W504,
+    W293,
+    W291
 per-file-ignores =
     __init__.py:F401
     ml_cli/cli.py:E402

@@ -56,7 +56,7 @@ def init(format: str, ssl_verify: bool):
             click.secho("❌ Setup cancelled.", fg="yellow")
             sys.exit(1)
 
-        changed_directory = (target_directory != original_dir)
+        changed_directory = target_directory != original_dir
         logging.info("Target directory chosen: %s", target_directory)
 
         # 3) Ask for the data path (with retries handled inside util)
@@ -111,9 +111,7 @@ def init(format: str, ssl_verify: bool):
                 click.secho("❌ No target column provided.", fg="red")
                 sys.exit(1)
 
-            target_found, corrected_target_column = is_target_in_file(
-                data_path, target_column, ssl_verify=ssl_verify
-            )
+            target_found, corrected_target_column = is_target_in_file(data_path, target_column, ssl_verify=ssl_verify)
             if target_found:
                 target_column = corrected_target_column
             else:
@@ -144,9 +142,7 @@ def init(format: str, ssl_verify: bool):
         output_dir = get_validated_output_dir() or "output"
 
         # 10) TPOT generations
-        generations = click.prompt(
-            "Please enter the number of TPOT generations", type=int, default=4
-        )
+        generations = click.prompt("Please enter the number of TPOT generations", type=int, default=4)
 
         # 11) Build config
         config_data = {
