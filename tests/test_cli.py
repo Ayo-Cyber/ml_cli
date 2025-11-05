@@ -132,17 +132,13 @@ def test_init_command(mock_confirm, mock_select, mock_text):
     with tempfile.TemporaryDirectory() as tmpdir:
         with runner.isolated_filesystem(temp_dir=tmpdir):
             # Create sample data for testing
-            data = pd.DataFrame({
-                "feature1": range(100),
-                "feature2": range(100, 200),
-                "Churn": [0, 1] * 50
-            })
+            data = pd.DataFrame({"feature1": range(100), "feature2": range(100, 200), "Churn": [0, 1] * 50})
             data_file = "test_data.csv"
             data.to_csv(data_file, index=False)
 
             # Use input to provide answers to prompts (for click.prompt)
-            # data_path, target_column, output_dir, generations
-            result = runner.invoke(cli, ["init"], input=f"{data_file}\nChurn\noutput\n1\n")
+            # data_path, target_column, output_dir, generations, population_size, max_time_mins
+            result = runner.invoke(cli, ["init"], input=f"{data_file}\nChurn\noutput\n1\n10\n2\n")
             assert result.exit_code == 0, f"Command failed with: {result.output}"
             assert os.path.exists("config.yaml")
 
