@@ -131,13 +131,19 @@ def test_init_command(mock_confirm, mock_select, mock_text):
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as tmpdir:
         with runner.isolated_filesystem(temp_dir=tmpdir):
-            # Use the example file as the data file
-            example_file_path = "/Users/admin/Documents/GitHub/ml_cli/examples/customer_churn_dataset-testing-master.csv"
+            # Create sample data for testing
+            data = pd.DataFrame({
+                "feature1": range(100),
+                "feature2": range(100, 200),
+                "Churn": [0, 1] * 50
+            })
+            data_file = "test_data.csv"
+            data.to_csv(data_file, index=False)
 
             # Use input to provide answers to prompts (for click.prompt)
             # data_path, target_column, output_dir, generations
-            result = runner.invoke(cli, ["init"], input=f"{example_file_path}\nChurn\n{tmpdir}/output\n4\n")
-            assert result.exit_code == 0
+            result = runner.invoke(cli, ["init"], input=f"{data_file}\nChurn\noutput\n1\n")
+            assert result.exit_code == 0, f"Command failed with: {result.output}"
             assert os.path.exists("config.yaml")
 
 
