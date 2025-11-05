@@ -40,7 +40,7 @@ Usage examples:
     default=True,
     help="Enable or disable SSL verification for data paths that are URLs. Default is enabled.",
 )
-def init(format, ssl_verify):
+def init(format: str, ssl_verify: bool):
     """Initialize a new configuration file (YAML or JSON)."""
     click.secho("Initializing configuration...", fg="green")
 
@@ -56,7 +56,7 @@ def init(format, ssl_verify):
             click.secho("❌ Setup cancelled.", fg="yellow")
             sys.exit(1)
 
-        changed_directory = (target_directory != original_dir)
+        changed_directory = target_directory != original_dir
         logging.info("Target directory chosen: %s", target_directory)
 
         # 3) Ask for the data path (with retries handled inside util)
@@ -111,9 +111,7 @@ def init(format, ssl_verify):
                 click.secho("❌ No target column provided.", fg="red")
                 sys.exit(1)
 
-            target_found, corrected_target_column = is_target_in_file(
-                data_path, target_column, ssl_verify=ssl_verify
-            )
+            target_found, corrected_target_column = is_target_in_file(data_path, target_column, ssl_verify=ssl_verify)
             if target_found:
                 target_column = corrected_target_column
             else:
@@ -144,9 +142,7 @@ def init(format, ssl_verify):
         output_dir = get_validated_output_dir() or "output"
 
         # 10) TPOT generations
-        generations = click.prompt(
-            "Please enter the number of TPOT generations", type=int, default=4
-        )
+        generations = click.prompt("Please enter the number of TPOT generations", type=int, default=4)
 
         # 11) Build config
         config_data = {
@@ -201,7 +197,7 @@ def init(format, ssl_verify):
         click.secho("\n❌ Operation cancelled by user.", fg="yellow")
         sys.exit(1)
     except Exception as e:
-        logging.error("Unexpected error during initialization: %s", e)
+        logging.error("Unexpected error during initialization: %s", e, exc_info=True)
         click.secho(f"❌ Unexpected error: {str(e)}", fg="red")
         click.secho("Please check the logs for more details.", fg="yellow")
         sys.exit(1)

@@ -11,7 +11,7 @@ setup(
     description="A CLI tool for machine learning workflows",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/ml_cli",
+    url="https://github.com/Ayo-Cyber/ml_cli",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -27,7 +27,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.8",
     install_requires=[
         "setuptools>=65.0.0",
         "pandas>=2.0.0,<2.3.0",
@@ -54,7 +53,7 @@ setup(
         "gunicorn>=20.1.0",
         "Jinja2>=3.0.0,<4.0.0",
         "itsdangerous>=2.0.0,<3.0.0",
-        "python-jose>=3.3.0,<4.0.0",
+        "python-dotenv>=0.19.0,<1.0.0",
         "passlib>=1.7.0,<2.0.0",
         "bcrypt>=3.2.0,<5.0.0",
         "SQLAlchemy>=1.4.0,<3.0.0",
@@ -70,4 +69,5 @@ setup(
             "ml=ml_cli.cli:cli",
         ],
     },
+    python_requires=">=3.10",
 )

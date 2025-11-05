@@ -4,7 +4,9 @@ import uvicorn
 import yaml
 import logging
 
-@click.command(help="""Serve the ML model as a REST API using FastAPI.
+
+@click.command(
+    help="""Serve the ML model as a REST API using FastAPI.
 
 The API automatically loads the trained model and adapts to the features used during training.
 No need to manually configure features - it's completely flexible!
@@ -19,33 +21,47 @@ API Endpoints:
   GET  /model-info  - Information about loaded model and features  
   POST /predict     - Make predictions using the trained model
   POST /reload-model - Reload model after retraining
-""")
-@click.option("--host", "-h", default="127.0.0.1",
-              help="The host IP address to bind the server to. Use '0.0.0.0' to make the server accessible externally. (Default: 127.0.0.1)")
-@click.option("--port", "-p", default=8000,
-              help="The port number on which the server will listen for incoming requests. (Default: 8000)")
-@click.option("--reload/--no-reload", default=True,
-              help="Enable or disable auto-reloading of the server when code changes are detected. Useful for development. (Default: True)")
-@click.option('--config', '-c', 'config_file', default="config.yaml",
-              help='The absolute or relative path to the configuration file (config.yaml or config.json) used to determine the model output directory.')
-def serve(host, port, reload, config_file):
+"""
+)
+@click.option(
+    "--host",
+    "-h",
+    default="127.0.0.1",
+    help="The host IP address to bind the server to. Use '0.0.0.0' to make the server accessible externally. (Default: 127.0.0.1)",
+)
+@click.option(
+    "--port", "-p", default=8000, help="The port number on which the server will listen for incoming requests. (Default: 8000)"
+)
+@click.option(
+    "--reload/--no-reload",
+    default=True,
+    help="Enable or disable auto-reloading of the server when code changes are detected. Useful for development. (Default: True)",
+)
+@click.option(
+    "--config",
+    "-c",
+    "config_file",
+    default="config.yaml",
+    help="The absolute or relative path to the configuration file (config.yaml or config.json) used to determine the model output directory.",
+)
+def serve(host: str, port: int, reload: bool, config_file: str):
     """Serve the ML model as a REST API using FastAPI."""
-    
+
     output_dir = "output"
     if os.path.exists(config_file):
-        with open(config_file, 'r') as f:
+        with open(config_file, "r") as f:
             try:
                 config = yaml.safe_load(f)
-                output_dir = config.get('output_dir', 'output')
+                output_dir = config.get("output_dir", "output")
             except yaml.YAMLError as exc:
                 click.secho(f"Error reading config file: {exc}", fg="red")
                 logging.error(f"Error reading config file: {exc}")
 
     # Check if model files exist
-    fitted_pipeline_path = os.path.join(output_dir, 'fitted_pipeline.pkl')
-    pipeline_path = os.path.join(output_dir, 'best_model_pipeline.py')
-    feature_info_path = os.path.join(output_dir, 'feature_info.json')
-    
+    fitted_pipeline_path = os.path.join(output_dir, "fitted_pipeline.pkl")
+    pipeline_path = os.path.join(output_dir, "best_model_pipeline.py")
+    feature_info_path = os.path.join(output_dir, "feature_info.json")
+
     if not os.path.exists(feature_info_path):
         click.secho("⚠️  Warning: No trained model found!", fg="yellow")
         logging.warning("No trained model found!")
@@ -67,7 +83,7 @@ def serve(host, port, reload, config_file):
         logging.warning("No trained model found!")
         click.secho("   Please run 'ml train' first to train a model.", fg="yellow")
         click.secho("   The API will start but predictions will not work until a model is available.\n", fg="yellow")
-    
+
     click.secho(f"🚀 Starting ML Model API at http://{host}:{port}", fg="green")
     logging.info(f"Starting ML Model API at http://{host}:{port}")
     click.secho("📚 API Documentation available at:", fg="blue")
@@ -76,6 +92,6 @@ def serve(host, port, reload, config_file):
     click.secho("\n🔍 Key endpoints:", fg="blue")
     click.secho(f"   - Model info: http://{host}:{port}/model-info", fg="blue")
     click.secho(f"   - Make predictions: POST http://{host}:{port}/predict", fg="blue")
-    
+
     os.environ["ML_CLI_CONFIG"] = config_file
     uvicorn.run("ml_cli.api.main:app", host=host, port=port, reload=reload)

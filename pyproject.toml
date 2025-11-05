@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=65.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ml_cli"
+version = "0.1.0"
+description = "A CLI tool for machine learning workflows"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Atunrase Ayomide", email = "atunraseayomide@gmail.com"}
+]
+keywords = ["machine-learning", "cli", "automation", "ml", "tpot"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/Ayo-Cyber/ml_cli"
+Repository = "https://github.com/Ayo-Cyber/ml_cli"
+Issues = "https://github.com/Ayo-Cyber/ml_cli/issues"
+
+[project.scripts]
+ml = "ml_cli.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ml_cli*"]
+exclude = ["tests*", "docs*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "timeout: marks tests with timeout limits",
+]
+addopts = "-v"

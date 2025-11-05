@@ -1,13 +1,19 @@
+LICENSE
+MANIFEST.in
 README.md
+pyproject.toml
+requirements.txt
 setup.py
+examples/Housing.csv
+examples/customer_churn_dataset-testing-master.csv
 ml_cli/__init__.py
 ml_cli/cli.py
 ml_cli.egg-info/PKG-INFO
 ml_cli.egg-info/SOURCES.txt
 ml_cli.egg-info/dependency_links.txt
 ml_cli.egg-info/entry_points.txt
-ml_cli.egg-info/requires.txt
 ml_cli.egg-info/top_level.txt
+ml_cli/api/main.py
 ml_cli/commands/__init__.py
 ml_cli/commands/clean.py
 ml_cli/commands/completion.py
@@ -25,3 +31,4 @@ ml_cli/utils/__init__.py
 ml_cli/utils/utils.py
 tests/__init__.py
 tests/test_cli.py
+tests/test_core_data.py

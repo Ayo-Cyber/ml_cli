@@ -4,14 +4,15 @@ import logging
 from ml_cli.utils.utils import log_artifact
 
 
-
-@click.command(help="""Clean up all generated artifacts recorded in .artifacts.log.
-""")
+@click.command(
+    help="""Clean up all generated artifacts recorded in .artifacts.log.
+"""
+)
 def clean():
     """Clean up all generated artifacts recorded in .artifacts.log."""
 
     artifacts_log_path = ".artifacts.log"
-    
+
     # Check if the artifact log file exists
     if not os.path.isfile(artifacts_log_path):
         click.secho("No artifacts log found. Nothing to clean.", fg="yellow")
@@ -44,5 +45,6 @@ def clean():
     click.secho(f" - Total artifacts deleted: {len(deleted_artifacts)}", fg="green")
     click.secho(f" - Total artifacts missing: {len(missing_artifacts)}", fg="yellow")
     logging.info("Cleanup completed.")
+
 
 # Add the clean command to the CLI entry points if necessary
