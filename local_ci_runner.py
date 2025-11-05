@@ -61,16 +61,28 @@ def main():
     # Install dependencies
     print_header("Installing Dependencies")
     if not run_command(
-        [sys.executable, "-m", "pip", "install", "--upgrade", "pip"],
+        [sys.executable, "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"],
         "Pip upgrade"
     ):
         all_passed = False
 
     if not run_command(
-        [sys.executable, "-m", "pip", "install", "-e", ".", "pytest", "pytest-cov", "flake8", "black"],
-        "Dependency installation"
+        [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
+        "Requirements installation"
     ):
         print(f"{Colors.YELLOW}Warning: Some dependencies may not be installed{Colors.NC}")
+
+    if not run_command(
+        [sys.executable, "-m", "pip", "install", "-e", "."],
+        "Package installation"
+    ):
+        print(f"{Colors.YELLOW}Warning: Package may not be installed{Colors.NC}")
+
+    if not run_command(
+        [sys.executable, "-m", "pip", "install", "pytest", "pytest-cov", "flake8", "black"],
+        "Testing tools installation"
+    ):
+        print(f"{Colors.YELLOW}Warning: Testing tools may not be installed{Colors.NC}")
 
     # 1. Linting
     print_header("Linting")
