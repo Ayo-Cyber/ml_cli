@@ -29,6 +29,5 @@ ml_cli/core/predict.py
 ml_cli/core/train.py
 ml_cli/utils/__init__.py
 ml_cli/utils/utils.py
-tests/__init__.py
 tests/test_cli.py
 tests/test_core_data.py

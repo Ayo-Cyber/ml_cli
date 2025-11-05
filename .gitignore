@@ -10,3 +10,5 @@ acme
 test.py
 .env
 output/
+dist/
+*.egg-info/

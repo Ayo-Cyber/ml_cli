@@ -35,7 +35,8 @@ def test_full_ml_pipeline(mock_confirm, mock_select, mock_text):
             data.to_csv("data.csv", index=False)
 
             # 1. Initialize project (using 1 generation for faster testing)
-            result = runner.invoke(cli, ["init"], input="data.csv\ntarget\noutput\n1\n")
+            # Input: data_path, target_column, output_dir, generations, population_size, max_time_mins
+            result = runner.invoke(cli, ["init"], input="data.csv\ntarget\noutput\n1\n10\n2\n")
             assert result.exit_code == 0
             assert os.path.exists("config.yaml")
 

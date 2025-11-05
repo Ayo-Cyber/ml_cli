@@ -141,8 +141,12 @@ def init(format: str, ssl_verify: bool):
         # 9) Output dir (name validity handled in util; it returns a str always)
         output_dir = get_validated_output_dir() or "output"
 
-        # 10) TPOT generations
-        generations = click.prompt("Please enter the number of TPOT generations", type=int, default=4)
+        # 10) TPOT configuration (optimized defaults for faster training)
+        click.echo("\n🔧 TPOT Configuration:")
+        click.echo("   (Lower values = faster training, higher values = better models)")
+        generations = click.prompt("   Number of generations", type=int, default=4)
+        population_size = click.prompt("   Population size", type=int, default=20)
+        max_time_mins = click.prompt("   Max time in minutes", type=int, default=5)
 
         # 11) Build config
         config_data = {
@@ -152,7 +156,13 @@ def init(format: str, ssl_verify: bool):
             },
             "task": {"type": task_type},
             "output_dir": output_dir,
-            "tpot": {"generations": generations},
+            "tpot": {
+                "generations": generations,
+                "population_size": population_size,
+                "max_time_mins": max_time_mins,
+                "cv_folds": 3,
+                "n_jobs": 1,  # Use 1 to avoid Dask issues
+            },
             "training": {"test_size": test_size, "random_state": 42},
         }
 
