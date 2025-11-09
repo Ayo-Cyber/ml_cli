@@ -1,15 +1,18 @@
-# 🤖 ML CLI Pipeline
+# 🤖 ML CLI Tool (ml-cli-tool)
 
 <div align="center">
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![PyPI Version](https://img.shields.io/badge/pypi-v0.1.0-orange.svg)](https://pypi.org/project/ml-cli/)
+[![PyPI Version](https://img.shields.io/badge/pypi-v0.1.0-orange.svg)](https://test.pypi.org/project/ml-cli-tool/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
 [![codecov](https://codecov.io/gh/Ayo-Cyber/ml_cli/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayo-Cyber/ml_cli)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 **A comprehensive command-line interface for end-to-end machine learning workflows**
+
+> 📦 **Package name**: `ml-cli-tool` (install via `pip install ml-cli-tool`)  
+> 🔧 **CLI command**: `ml` (after installation)
 
 [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Examples](#-examples) • [Contributing](#-contributing)
 
@@ -17,7 +20,7 @@
 
 ## 🚀 Overview
 
-ML CLI Pipeline is a powerful, user-friendly command-line tool that streamlines the entire machine learning workflow. From data exploration to model deployment, it provides a unified interface for data scientists and ML engineers to build, train, and serve machine learning models with minimal setup.
+**ML CLI Tool** is a powerful, user-friendly command-line tool that streamlines the entire machine learning workflow. From data exploration to model deployment, it provides a unified interface for data scientists and ML engineers to build, train, and serve machine learning models with minimal setup.
 
 Built with modern Python technologies including **FastAPI**, **TPOT AutoML**, and **Click**, this tool eliminates the repetitive scripting often required in ML projects and provides production-ready model serving capabilities.
 
@@ -66,7 +69,17 @@ Built with modern Python technologies including **FastAPI**, **TPOT AutoML**, an
 - Python 3.10 or higher
 - pip (Python package installer)
 
-### Quick Install
+### Quick Install (from TestPyPI)
+
+```bash
+# Install from TestPyPI
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ ml-cli-tool
+
+# Verify installation
+ml --help
+```
+
+### Install from Source
 
 ```bash
 # Clone the repository

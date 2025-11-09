@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="ml_cli",
+    name="ml-cli-tool",
     version="0.1.0",
     author="Atunrase Ayomide",
     author_email="atunraseayomide@gmail.com",
