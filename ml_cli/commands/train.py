@@ -58,8 +58,8 @@ def train(config_file: str):
         if categorical_cols:
             click.secho(f"Found categorical columns: {categorical_cols}", fg="yellow")
             logging.info(f"Found categorical columns: {categorical_cols}")
-            click.secho("Automatically preprocessing categorical data for TPOT...", fg="blue")
-            logging.info("Automatically preprocessing categorical data for TPOT...")
+            click.secho("PyCaret will automatically preprocess categorical data...", fg="blue")
+            logging.info("PyCaret will automatically preprocess categorical data...")
 
         # Train the model
         train_model(data, config)

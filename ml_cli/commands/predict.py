@@ -32,7 +32,7 @@ Usage example:
     "-m",
     type=click.Path(exists=True),
     required=True,
-    help='The absolute or relative path to the directory containing the trained model (e.g., "fitted_pipeline.pkl") and feature information ("feature_info.json").',
+    help='The absolute or relative path to the directory containing the trained model (e.g., "pycaret_model.pkl") and feature information ("feature_info.json").',
 )
 def predict(input_path: str, output_path: str, model_path: str):
     """Make predictions on new data using a trained model."""
@@ -46,16 +46,19 @@ def predict(input_path: str, output_path: str, model_path: str):
             logging.warning("The input data is empty. Nothing to predict.")
             return
 
-        # Load the pipeline and feature_info
-        pipeline = joblib.load(os.path.join(model_path, "fitted_pipeline.pkl"))
+        # Load feature_info to get task type
         with open(os.path.join(model_path, "feature_info.json"), "r") as f:
             feature_info = json.load(f)
 
-        # Reorder columns of new_data to match the order of features in feature_info
-        new_data = new_data[feature_info["feature_names"]]
+        task_type = feature_info.get("task_type", "classification")
 
-        # Make predictions
-        predictions = pipeline.predict(new_data)
+        # Load PyCaret model
+        from ml_cli.core.predict import load_pycaret_model, make_predictions
+
+        model = load_pycaret_model(model_path, task_type)
+
+        # Make predictions using PyCaret
+        predictions, _ = make_predictions(model, new_data, task_type)
 
         # Save the predictions
         output_dir = os.path.dirname(output_path)

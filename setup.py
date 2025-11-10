@@ -46,7 +46,7 @@ setup(
         "uvicorn>=0.20.0,<1.0.0",
         "scikit-learn>=1.1.0,<2.0.0",
         "joblib>=1.1.0,<2.0.0",
-        "tpot",
+        "pycaret",
         "matplotlib>=3.5.0,<4.0.0",
         "seaborn>=0.11.0,<1.0.0",
         "python-multipart>=0.0.5",

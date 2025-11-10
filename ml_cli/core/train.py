@@ -2,61 +2,16 @@ import os
 import logging
 import warnings
 import json
-import joblib
 import pandas as pd
 import click
-from tpot import TPOTClassifier, TPOTRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 from ml_cli.utils.utils import log_artifact
 
-# Suppress the torch warning from TPOT
-warnings.filterwarnings("ignore", message="Warning: optional dependency `torch` is not available.*")
-
-
-def preprocess_categorical_data(data: pd.DataFrame, target_column: str):
-    """Preprocess categorical data for TPOT training."""
-    data_copy = data.copy()
-
-    # Identify categorical columns (object type)
-    categorical_columns = data_copy.select_dtypes(include=["object"]).columns.tolist()
-
-    # Remove target column from categorical processing if it's categorical
-    if target_column in categorical_columns:
-        categorical_columns.remove(target_column)
-
-        # Handle categorical target variable
-        if data_copy[target_column].dtype == "object":
-            le = LabelEncoder()
-            data_copy[target_column] = le.fit_transform(data_copy[target_column])
-            logging.info(f"Label encoded target column '{target_column}': {dict(zip(le.classes_, le.transform(le.classes_)))}")
-
-    # One-hot encode categorical features
-    if categorical_columns:
-        logging.info(f"One-hot encoding categorical columns: {categorical_columns}")
-        data_copy = pd.get_dummies(data_copy, columns=categorical_columns, drop_first=True)
-        logging.info(f"Data shape after encoding: {data_copy.shape}")
-
-    # Ensure all columns are numeric
-    for col in data_copy.columns:
-        if data_copy[col].dtype == "object":
-            logging.warning(f"Column '{col}' is still non-numeric, attempting conversion...")
-            try:
-                data_copy[col] = pd.to_numeric(data_copy[col], errors="coerce")
-            except:
-                # If conversion fails, drop the column
-                logging.warning(f"Dropping non-convertible column: {col}")
-                data_copy = data_copy.drop(columns=[col])
-
-    # Handle any NaN values that might have been introduced
-    if data_copy.isnull().any().any():
-        logging.warning("Found NaN values after preprocessing, filling with 0")
-        data_copy = data_copy.fillna(0)
-    return data_copy
+# Suppress warnings
+warnings.filterwarnings("ignore")
 
 
 def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
-    """Train the model using TPOT."""
+    """Train the model using PyCaret."""
     try:
         target_column = config["data"]["target_column"]
         if target_column not in data.columns:
@@ -66,24 +21,6 @@ def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
             test_size = config.get("training", {}).get("test_size", 0.2)
 
         click.echo(f"📊 Using {test_size:.1%} of data for testing")
-
-        # Preprocess categorical variables automatically
-        data_processed = preprocess_categorical_data(data, target_column)
-
-        X = data_processed.drop(columns=[target_column])
-        y = data_processed[target_column]
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=42, stratify=y if config["task"]["type"] == "classification" else None
-        )
-
-        # Save feature information for serving
-        feature_info = {
-            "feature_names": X.columns.tolist(),
-            "feature_types": X.dtypes.astype(str).to_dict(),
-            "target_column": target_column,
-            "task_type": config["task"]["type"],
-        }
 
     except KeyError as e:
         logging.error(f"Missing key in config: {e}")
@@ -96,80 +33,131 @@ def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
         raise
 
     task_type = config["task"]["type"]
-    tpot_config = config.get("tpot", {})
+    pycaret_config = config.get("pycaret", {})
 
-    # Get TPOT parameters with optimized defaults
-    generations = tpot_config.get("generations", 4)
-    population_size = tpot_config.get("population_size", 20)  # Default 100 is too slow
-    max_time_mins = tpot_config.get("max_time_mins", 5)
-    cv_folds = tpot_config.get("cv_folds", 3)  # Default 5 is too slow
-    n_jobs = tpot_config.get("n_jobs", 1)  # Use 1 to avoid Dask issues, or set higher manually
+    # Get PyCaret parameters
+    normalize = pycaret_config.get("normalize", True)
+    feature_selection = pycaret_config.get("feature_selection", True)
+    remove_outliers = pycaret_config.get("remove_outliers", False)
+    n_select = pycaret_config.get("n_select", 3)
+    session_id = pycaret_config.get("session_id", 42)
+    fold = pycaret_config.get("fold", 3)
+    verbose = pycaret_config.get("verbose", False)
 
-    # Build TPOT kwargs
-    tpot_kwargs = {
-        "generations": generations,
-        "population_size": population_size,
-        "max_time_mins": max_time_mins,
-        "cv": cv_folds,
-        "n_jobs": n_jobs,
-        "random_state": 42,
-        "verbose": 2,  # Show generation progress
-    }
-
-    click.echo(f"\n🔧 TPOT Configuration:")
-    click.echo(f"   Generations: {generations}")
-    click.echo(f"   Population size: {population_size}")
-    click.echo(f"   Max time: {max_time_mins} minutes")
-    click.echo(f"   Cross-validation folds: {cv_folds}")
-    click.echo(f"   Parallel jobs: {n_jobs}")
+    click.echo(f"\n🔧 PyCaret Configuration:")
+    click.echo(f"   Task: {task_type}")
+    click.echo(f"   Normalize: {normalize}")
+    click.echo(f"   Feature Selection: {feature_selection}")
+    click.echo(f"   Remove Outliers: {remove_outliers}")
+    click.echo(f"   Models to compare: {n_select}")
+    click.echo(f"   CV Folds: {fold}")
     click.echo()
 
-    if task_type == "classification":
-        model = TPOTClassifier(**tpot_kwargs)
-    elif task_type == "regression":
-        model = TPOTRegressor(**tpot_kwargs)
-    else:
-        raise ValueError("Unsupported task type.")
-
     try:
-        logging.info("Starting TPOT optimization...")
-        click.echo("🚀 Starting TPOT AutoML optimization...\n")
-        model.fit(X_train, y_train)
+        logging.info("Starting PyCaret setup...")
+        click.echo("� Setting up PyCaret environment...\n")
 
+        # Import appropriate PyCaret module based on task type
+        if task_type == "classification":
+            from pycaret.classification import setup, compare_models, save_model, finalize_model, pull
+            
+            # Setup experiment
+            exp = setup(
+                data=data,
+                target=target_column,
+                train_size=1 - test_size,
+                normalize=normalize,
+                feature_selection=feature_selection,
+                remove_outliers=remove_outliers,
+                session_id=session_id,
+                fold=fold,
+                verbose=verbose,
+                html=False,
+                silent=True,
+                n_jobs=1,
+            )
+            
+        elif task_type == "regression":
+            from pycaret.regression import setup, compare_models, save_model, finalize_model, pull
+            
+            # Setup experiment
+            exp = setup(
+                data=data,
+                target=target_column,
+                train_size=1 - test_size,
+                normalize=normalize,
+                feature_selection=feature_selection,
+                remove_outliers=remove_outliers,
+                session_id=session_id,
+                fold=fold,
+                verbose=verbose,
+                html=False,
+                silent=True,
+                n_jobs=1,
+            )
+        else:
+            raise ValueError(f"Unsupported task type: {task_type}")
+
+        click.echo("✅ PyCaret environment setup complete!\n")
+        
+        # Compare models
+        logging.info("Comparing models...")
+        click.echo(f"🤖 Comparing top {n_select} models...\n")
+        
+        best_models = compare_models(
+            n_select=n_select,
+            sort='Accuracy' if task_type == 'classification' else 'R2',
+            verbose=False,
+        )
+        
+        # Get comparison results
+        comparison_df = pull()
+        click.echo("\n📊 Model Comparison Results:")
+        click.echo(comparison_df.to_string(index=False))
+        click.echo()
+        
+        # Select best model
+        best_model = best_models[0] if isinstance(best_models, list) else best_models
+        model_name = type(best_model).__name__
+        click.echo(f"\n✅ Best model selected: {model_name}")
+        
+        # Finalize model (train on full dataset)
+        logging.info(f"Finalizing model: {model_name}")
+        click.echo(f"� Training final {model_name} model on full dataset...\n")
+        final_model = finalize_model(best_model)
+
+        # Save model
         output_dir = config.get("output_dir", "output")
         os.makedirs(output_dir, exist_ok=True)
 
-        # Save fitted pipeline
-        fitted_pipeline = model.fitted_pipeline_
-        if fitted_pipeline is not None:
-            pipeline_pkl_path = os.path.join(output_dir, "fitted_pipeline.pkl")
-            try:
-                joblib.dump(fitted_pipeline, pipeline_pkl_path)
-                logging.info(f"Fitted pipeline saved to {pipeline_pkl_path}")
-                log_artifact(pipeline_pkl_path)
-            except Exception as e:
-                logging.warning(f"Could not save fitted pipeline: {e}")
+        model_path = os.path.join(output_dir, "pycaret_model")
+        save_model(final_model, model_path)
+        
+        click.echo(f"\n💾 Model saved to {model_path}.pkl")
+        logging.info(f"Model saved to {model_path}.pkl")
+        log_artifact(f"{model_path}.pkl")
 
-        # Save feature metadata and model score
-        try:
-            score = fitted_pipeline.score(X_test, y_test) if fitted_pipeline else None
-            if score is not None:
-                feature_info["model_score"] = float(score)
-                logging.info(f"Model performance score: {score}")
+        # Save feature information
+        feature_info = {
+            "model_name": model_name,
+            "target_column": target_column,
+            "task_type": task_type,
+            "pycaret_config": pycaret_config,
+        }
+        
+        feature_info_path = os.path.join(output_dir, "feature_info.json")
+        with open(feature_info_path, "w") as f:
+            json.dump(feature_info, f, indent=2)
+        logging.info(f"Feature info saved to {feature_info_path}")
+        log_artifact(feature_info_path)
 
-            feature_info_path = os.path.join(output_dir, "feature_info.json")
-            with open(feature_info_path, "w") as f:
-                json.dump(feature_info, f, indent=2)
-
-            logging.info(f"Feature info saved to {feature_info_path}")
-            log_artifact(feature_info_path)
-        except IOError as e:
-            logging.error(f"Error saving feature info: {e}")
-        except Exception as e:
-            logging.error(f"Unexpected error while saving feature info: {e}")
-
-        logging.info("TPOT optimization completed.")
-        return model
+        logging.info("PyCaret training completed successfully!")
+        click.echo("\n✅ Training completed successfully!\n")
+        
+        return final_model
+        
     except Exception as e:
-        logging.error(f"Error during model training or exporting: {e}")
+        logging.error(f"Error during model training: {e}", exc_info=True)
+        click.echo(f"\n❌ Error during training: {e}\n")
+        raise
         raise

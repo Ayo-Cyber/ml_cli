@@ -458,18 +458,25 @@ def generate_realistic_example_from_stats(feature_info: dict) -> dict[str, Any]:
 
 
 def load_model(output_dir: str):
-    """Load model and return the objects instead of setting globals"""
+    """Load PyCaret model and return the objects instead of setting globals"""
     try:
-        pipeline_path = Path(output_dir) / "fitted_pipeline.pkl"
+        model_path = Path(output_dir) / "pycaret_model.pkl"
         feature_info_path = Path(output_dir) / "feature_info.json"
 
-        if not pipeline_path.exists() or not feature_info_path.exists():
+        if not model_path.exists() or not feature_info_path.exists():
             logging.warning("Model files not found. API will start but predictions will not work.")
             return None, None, None, None
 
-        pipeline = joblib.load(pipeline_path)
+        # Load feature info first to get task type
         with open(feature_info_path, "r", encoding="utf-8") as f:
             feature_info = json.load(f)
+
+        task_type = feature_info.get("task_type", "classification")
+
+        # Load PyCaret model using the core module
+        from ml_cli.core.predict import load_pycaret_model
+
+        pipeline = load_pycaret_model(str(output_dir), task_type)
 
         logging.info(f"Feature info keys: {feature_info.keys()}")
         logging.info(f"Feature names: {feature_info.get('feature_names', [])}")

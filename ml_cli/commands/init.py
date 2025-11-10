@@ -141,12 +141,13 @@ def init(format: str, ssl_verify: bool):
         # 9) Output dir (name validity handled in util; it returns a str always)
         output_dir = get_validated_output_dir() or "output"
 
-        # 10) TPOT configuration (optimized defaults for faster training)
-        click.echo("\n🔧 TPOT Configuration:")
-        click.echo("   (Lower values = faster training, higher values = better models)")
-        generations = click.prompt("   Number of generations", type=int, default=4)
-        population_size = click.prompt("   Population size", type=int, default=20)
-        max_time_mins = click.prompt("   Max time in minutes", type=int, default=5)
+        # 10) PyCaret configuration
+        click.echo("\n🔧 PyCaret Configuration:")
+        click.echo("   (Enable preprocessing and model selection options)")
+        normalize = click.confirm("   Normalize features?", default=True)
+        feature_selection = click.confirm("   Enable feature selection?", default=True)
+        remove_outliers = click.confirm("   Remove outliers?", default=False)
+        n_select = click.prompt("   Number of top models to compare", type=int, default=3)
 
         # 11) Build config
         config_data = {
@@ -156,12 +157,14 @@ def init(format: str, ssl_verify: bool):
             },
             "task": {"type": task_type},
             "output_dir": output_dir,
-            "tpot": {
-                "generations": generations,
-                "population_size": population_size,
-                "max_time_mins": max_time_mins,
-                "cv_folds": 3,
-                "n_jobs": 1,  # Use 1 to avoid Dask issues
+            "pycaret": {
+                "normalize": normalize,
+                "feature_selection": feature_selection,
+                "remove_outliers": remove_outliers,
+                "n_select": n_select,
+                "session_id": 42,
+                "fold": 3,
+                "verbose": False,
             },
             "training": {"test_size": test_size, "random_state": 42},
         }

@@ -124,20 +124,26 @@ def predict(payload: dict = Body(...)):
 
         # Make prediction with error handling
         try:
-            prediction = pipeline.predict(input_df)
+            from ml_cli.core.predict import make_predictions
+
+            task_type = feature_info.get("task_type", "classification")
+            predictions, predictions_df = make_predictions(pipeline, input_df, task_type)
+            prediction = predictions  # predictions is already a numpy array
         except Exception as e:
             logging.error(f"Pipeline prediction error: {e}")
             raise HTTPException(status_code=500, detail=f"Model prediction failed: {str(e)}")
 
-        # Get prediction probabilities if available (for classification)
+        # Get prediction probabilities from predictions_df if available (for classification)
         probabilities = None
-        task_type = feature_info.get("task_type", "").lower()
+        task_type_lower = feature_info.get("task_type", "").lower()
 
-        if task_type == "classification" and hasattr(pipeline, "predict_proba"):
+        if task_type_lower == "classification":
             try:
-                proba = pipeline.predict_proba(input_df)
-                if proba is not None and len(proba) > 0:
-                    probabilities = proba[0]  # Get first (and only) row
+                # PyCaret's predict_model includes probability columns
+                # They're named like prediction_label_0, prediction_label_1, etc.
+                prob_cols = [col for col in predictions_df.columns if col.startswith("prediction_label_")]
+                if prob_cols:
+                    probabilities = predictions_df[prob_cols].values[0]  # Get first row
             except Exception as e:
                 logging.warning(f"Could not get probabilities: {e}")
 
@@ -209,18 +215,23 @@ def predict_batch(payload: dict = Body(...)):
 
         # Make predictions
         try:
-            predictions = pipeline.predict(input_df)
+            from ml_cli.core.predict import make_predictions
+
+            task_type = feature_info.get("task_type", "classification")
+            predictions, predictions_df = make_predictions(pipeline, input_df, task_type)
         except Exception as e:
             logging.error(f"Batch prediction error: {e}")
             raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}")
 
-        # Get probabilities if available
+        # Get probabilities from predictions_df if available
         probabilities = None
-        task_type = feature_info.get("task_type", "").lower()
+        task_type_lower = feature_info.get("task_type", "").lower()
 
-        if task_type == "classification" and hasattr(pipeline, "predict_proba"):
+        if task_type_lower == "classification":
             try:
-                probabilities = pipeline.predict_proba(input_df)
+                prob_cols = [col for col in predictions_df.columns if col.startswith("prediction_label_")]
+                if prob_cols:
+                    probabilities = predictions_df[prob_cols].values  # All rows
             except Exception as e:
                 logging.warning(f"Could not get prediction probabilities: {e}")
 
