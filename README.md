@@ -2,9 +2,9 @@
 
 <div align="center">
 
-[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![PyPI Version](https://img.shields.io/badge/pypi-v0.1.0-orange.svg)](https://test.pypi.org/project/ml-cli-tool/)
+[![PyPI Version](https://img.shields.io/badge/pypi-v0.2.0-orange.svg)](https://test.pypi.org/project/ml-cli-tool/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
 [![codecov](https://codecov.io/gh/Ayo-Cyber/ml_cli/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayo-Cyber/ml_cli)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -22,14 +22,15 @@
 
 **ML CLI Tool** is a powerful, user-friendly command-line tool that streamlines the entire machine learning workflow. From data exploration to model deployment, it provides a unified interface for data scientists and ML engineers to build, train, and serve machine learning models with minimal setup.
 
-Built with modern Python technologies including **FastAPI**, **TPOT AutoML**, and **Click**, this tool eliminates the repetitive scripting often required in ML projects and provides production-ready model serving capabilities.
+Built with modern Python technologies including **FastAPI**, **LightAutoML**, and **Click**, this tool eliminates the repetitive scripting often required in ML projects and provides production-ready model serving capabilities with intelligent categorical encoding.
 
 ### ✨ Why ML CLI Pipeline?
 
 - **🎯 Zero Configuration**: Get started with a single command - no complex setup files
 - **🔄 End-to-End Workflow**: Complete ML pipeline from EDA to production deployment
-- **🤖 AutoML Integration**: Leverage TPOT for automated model selection and hyperparameter tuning
-- **🚀 Production Ready**: Built-in FastAPI server for immediate model deployment
+- **🤖 AutoML Integration**: Leverage LightAutoML for fast, efficient model selection
+- **🚀 Production Ready**: Built-in FastAPI server with auto-generated documentation
+- **🔤 Smart Encoding**: Automatic categorical feature encoding with human-readable API
 - **📊 Rich Visualizations**: Automated EDA reports with beautiful plots and statistics
 - **🔧 Flexible Configuration**: Support for both YAML and JSON configuration formats
 - **🧪 Thoroughly Tested**: Comprehensive test suite ensuring reliability
@@ -44,7 +45,8 @@ Built with modern Python technologies including **FastAPI**, **TPOT AutoML**, an
 - **Interactive Project Setup** - Guided initialization with intelligent defaults
 - **Automated EDA** - Comprehensive data analysis with visualizations
 - **Smart Preprocessing** - Automatic categorical encoding and data cleaning
-- **AutoML Training** - TPOT-powered model optimization
+- **AutoML Training** - LightAutoML-powered model optimization
+- **Categorical Encoding** - Automatic encoding with human-readable API inputs
 - **Flexible Prediction** - Easy inference on new data
 - **Production Serving** - FastAPI-based REST API deployment
 
@@ -66,7 +68,7 @@ Built with modern Python technologies including **FastAPI**, **TPOT AutoML**, an
 ## 🛠️ Installation
 
 ### Prerequisites
-- Python 3.10 or higher
+- Python 3.12 or higher (Python 3.10+ supported)
 - pip (Python package installer)
 
 ### Quick Install (from TestPyPI)
@@ -146,10 +148,11 @@ Automatically handles:
 ml train
 ```
 
-Leverages TPOT AutoML to:
-- Find optimal algorithms
-- Tune hyperparameters
-- Export production-ready models
+Leverages LightAutoML to:
+- Automatically detect and encode categorical features
+- Find optimal algorithms efficiently
+- Tune hyperparameters with intelligent search
+- Export production-ready models with encoders
 - Generate performance metrics
 
 ### 5. Serve Your Model
@@ -160,9 +163,11 @@ ml serve
 
 Instantly deploy your model with:
 - 🌐 RESTful API endpoints
-- 📚 Interactive documentation at `/docs`
+- 📚 Interactive Swagger UI documentation at `/docs`
 - 🔄 Hot-reload capabilities
-- 📝 Auto-generated examples
+- 📝 Auto-generated examples with categorical values
+- 🔤 Automatic categorical encoding (send "Male" instead of 0)
+- ✅ Input validation with helpful error messages
 
 ## 📖 Documentation
 
@@ -234,25 +239,32 @@ ml train [OPTIONS]
 **Options:**
 - `--config, -c PATH` - Configuration file path (default: config.yaml)
 
-**TPOT Configuration (in config.yaml):**
+**LightAutoML Configuration (in config.yaml):**
 ```yaml
-tpot:
-  generations: 4          # Number of optimization iterations
-  population_size: 20     # Pipelines per generation (lower = faster)
-  max_time_mins: 5        # Hard time limit
-  cv_folds: 3            # Cross-validation folds (lower = faster)
-  n_jobs: 1              # Parallel jobs (1 = no parallelization)
+lightautoml:
+  timeout: 300           # Training timeout in seconds
+  cpu_limit: 4          # Number of CPU cores to use
+  gpu_ids: null         # GPU IDs (e.g., "0,1" or null for CPU only)
 ```
 
 **Performance Tips:**
-- For **quick testing**: `generations: 1-2`, `population_size: 10`
-- For **balanced training**: `generations: 4`, `population_size: 20` (default)
-- For **production**: `generations: 10`, `population_size: 50`
+- For **quick testing**: `timeout: 60` (1 minute)
+- For **balanced training**: `timeout: 300` (5 minutes, default)
+- For **production**: `timeout: 600-1800` (10-30 minutes)
+- **CPU cores**: Set `cpu_limit` to your available cores (default: 4)
+- **GPU acceleration**: Set `gpu_ids: "0"` if you have a compatible GPU
 
 **Outputs:**
-- `fitted_pipeline.pkl` - Serialized model
-- `best_model_pipeline.py` - Exportable Python script
+- `lightautoml_model.pkl` - Trained LightAutoML model
+- `encoders.pkl` - Categorical feature encoders (if categorical data detected)
+- `feature_encodings.json` - Human-readable categorical value mappings
 - `feature_info.json` - Model metadata and statistics
+
+**Categorical Feature Handling:**
+- **Automatic Detection**: Detects categorical columns (object/category dtype)
+- **Smart Encoding**: Creates LabelEncoder for each categorical feature
+- **Human-Readable API**: API accepts original values ("Male", "Premium")
+- **Validation**: API rejects unknown categorical values with helpful errors
 
 </details>
 
@@ -286,9 +298,35 @@ ml serve [OPTIONS]
 **API Endpoints:**
 - `GET /` - API information
 - `GET /health` - Health check
-- `GET /model-info` - Model metadata
-- `POST /predict` - Make predictions
-- `GET /docs` - Interactive documentation
+- `GET /model-info` - Model metadata and categorical encodings
+- `POST /predict` - Make predictions (single sample)
+- `POST /predict-batch` - Batch predictions
+- `POST /reload-model` - Reload model after retraining
+- `GET /docs` - Interactive Swagger UI documentation
+- `GET /redoc` - Alternative ReDoc documentation
+
+**Categorical Features in API:**
+```bash
+# API automatically accepts human-readable categorical values
+curl -X POST "http://localhost:8000/predict" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "Gender": "Male",
+       "Subscription Type": "Premium",
+       "Contract Length": "Monthly",
+       "Age": 45,
+       "Tenure": 12
+     }'
+```
+
+**Response includes predictions and probabilities:**
+```json
+{
+  "prediction": 1,
+  "probabilities": [0.324, 0.676],
+  "confidence": 0.676
+}
+```
 
 </details>
 
@@ -314,17 +352,14 @@ data:
   target_column: 'target'
 
 task:
-  type: 'classification'  # or 'regression', 'clustering'
+  type: 'classification'  # or 'regression'
 
 output_dir: 'output'
 
-tpot:
-  generations: 4
-  population_size: 20
-  max_time_mins: 5
-  cv_folds: 3
-  n_jobs: 1
-  verbosity: 2
+lightautoml:
+  timeout: 300         # Training timeout in seconds (5 minutes)
+  cpu_limit: 4        # Number of CPU cores
+  gpu_ids: null       # GPU IDs (e.g., "0,1") or null for CPU
 
 training:
   test_size: 0.2
@@ -352,10 +387,43 @@ ml train
 # 5. Start API server
 ml serve --port 8080
 
-# 6. Test your API
+# 6. Test your API (with categorical features)
 curl -X POST "http://localhost:8080/predict" \
      -H "Content-Type: application/json" \
-     -d '{"feature1": 1.0, "feature2": 2.0}'
+     -d '{
+       "Gender": "Male",
+       "Age": 45,
+       "Subscription Type": "Premium"
+     }'
+```
+
+### Categorical Feature Example
+
+```bash
+# Train a model with categorical data
+ml train
+
+# The tool automatically detects categorical columns
+# Output shows: "✅ Created encoders for 3 categorical features"
+
+# Start the API server
+ml serve
+
+# API accepts human-readable categorical values
+curl -X POST "http://localhost:8000/predict" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "Gender": "Male",           # Not 0 or 1!
+       "Subscription Type": "Premium",
+       "Contract Length": "Monthly"
+     }'
+
+# Response includes predictions and probabilities
+# {
+#   "prediction": 1,
+#   "probabilities": [0.324, 0.676],
+#   "confidence": 0.676
+# }
 ```
 
 ### Working with Remote Data
@@ -393,10 +461,10 @@ graph TB
     D --> E[ml preprocess]
     E --> F[Data Cleaning]
     F --> G[ml train]
-    G --> H[TPOT AutoML]
+    G --> H[LightAutoML + Encoders]
     H --> I[Model Export]
     I --> J[ml serve]
-    J --> K[FastAPI Server]
+    J --> K[FastAPI + Auto Encoding]
     
     style A fill:#e1f5fe
     style G fill:#f3e5f5
@@ -539,7 +607,19 @@ A: Currently supports CSV, TXT, and JSON files. Both local files and remote URLs
 <details>
 <summary><b>Q: Can I use custom machine learning algorithms?</b></summary>
 
-A: Currently, the tool uses TPOT for AutoML. Custom algorithms will be supported in future versions through the plugin system.
+A: Currently, the tool uses LightAutoML for AutoML. LightAutoML automatically selects from a variety of algorithms including gradient boosting, neural networks, and linear models. Custom algorithms will be supported in future versions through a plugin system.
+</details>
+
+<details>
+<summary><b>Q: How are categorical features handled?</b></summary>
+
+A: Categorical features are automatically detected during training and encoded using LabelEncoders. The API accepts human-readable categorical values (like "Male", "Premium") and automatically encodes them. Unknown values are rejected with helpful error messages listing valid options.
+</details>
+
+<details>
+<summary><b>Q: What's the difference between LightAutoML and TPOT?</b></summary>
+
+A: We migrated from TPOT to LightAutoML in v0.2.0 for better Python 3.12+ support, faster training times, and improved handling of categorical features. LightAutoML uses timeout-based training instead of generations, making it more predictable and efficient.
 </details>
 
 <details>
@@ -551,7 +631,61 @@ A: Use `ml serve` to create a production-ready FastAPI server. For advanced depl
 <details>
 <summary><b>Q: Is GPU training supported?</b></summary>
 
-A: GPU support depends on the underlying TPOT and scikit-learn implementations. Future versions will include explicit GPU acceleration.
+A: Yes! LightAutoML supports GPU acceleration. Set `gpu_ids: "0"` in your config.yaml to enable GPU training. Make sure you have PyTorch with CUDA support installed.
+</details>
+
+## 🔄 Migration Guide
+
+### Upgrading from v0.1.x (TPOT) to v0.2.x (LightAutoML)
+
+If you have projects using the old TPOT-based version, here's how to migrate:
+
+**1. Update Configuration File:**
+
+Old (TPOT):
+```yaml
+tpot:
+  generations: 4
+  population_size: 20
+  max_time_mins: 5
+  cv_folds: 3
+  n_jobs: 1
+```
+
+New (LightAutoML):
+```yaml
+lightautoml:
+  timeout: 300       # 5 minutes (max_time_mins * 60)
+  cpu_limit: 4       # Use available cores
+  gpu_ids: null      # null for CPU, "0" for GPU
+```
+
+**2. Update Python Version:**
+- Old: Python 3.10+
+- New: Python 3.12+ (though 3.10+ still works)
+
+**3. Retrain Models:**
+```bash
+# Old models (fitted_pipeline.pkl) won't work with new version
+# Retrain with LightAutoML:
+ml train
+```
+
+**4. New Model Files:**
+- Old: `fitted_pipeline.pkl`, `best_model_pipeline.py`
+- New: `lightautoml_model.pkl`, `encoders.pkl`, `feature_encodings.json`
+
+**5. API Changes:**
+- ✅ Categorical features now accepted as strings (automatic encoding)
+- ✅ Responses include probabilities and confidence scores
+- ✅ Better error messages with valid value suggestions
+
+**Benefits of Migration:**
+- ⚡ **Faster Training**: 2-3x speed improvement
+- 🐍 **Python 3.12 Support**: Latest Python features
+- 🔤 **Better UX**: Human-readable categorical inputs
+- 🎯 **Predictable Runtime**: Timeout-based instead of generation-based
+
 </details>
 
 ---

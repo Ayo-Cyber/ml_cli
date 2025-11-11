@@ -5,58 +5,17 @@ import json
 import joblib
 import pandas as pd
 import click
-from tpot import TPOTClassifier, TPOTRegressor
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score
 from sklearn.preprocessing import LabelEncoder
 from ml_cli.utils.utils import log_artifact
 
-# Suppress the torch warning from TPOT
-warnings.filterwarnings("ignore", message="Warning: optional dependency `torch` is not available.*")
-
-
-def preprocess_categorical_data(data: pd.DataFrame, target_column: str):
-    """Preprocess categorical data for TPOT training."""
-    data_copy = data.copy()
-
-    # Identify categorical columns (object type)
-    categorical_columns = data_copy.select_dtypes(include=["object"]).columns.tolist()
-
-    # Remove target column from categorical processing if it's categorical
-    if target_column in categorical_columns:
-        categorical_columns.remove(target_column)
-
-        # Handle categorical target variable
-        if data_copy[target_column].dtype == "object":
-            le = LabelEncoder()
-            data_copy[target_column] = le.fit_transform(data_copy[target_column])
-            logging.info(f"Label encoded target column '{target_column}': {dict(zip(le.classes_, le.transform(le.classes_)))}")
-
-    # One-hot encode categorical features
-    if categorical_columns:
-        logging.info(f"One-hot encoding categorical columns: {categorical_columns}")
-        data_copy = pd.get_dummies(data_copy, columns=categorical_columns, drop_first=True)
-        logging.info(f"Data shape after encoding: {data_copy.shape}")
-
-    # Ensure all columns are numeric
-    for col in data_copy.columns:
-        if data_copy[col].dtype == "object":
-            logging.warning(f"Column '{col}' is still non-numeric, attempting conversion...")
-            try:
-                data_copy[col] = pd.to_numeric(data_copy[col], errors="coerce")
-            except:
-                # If conversion fails, drop the column
-                logging.warning(f"Dropping non-convertible column: {col}")
-                data_copy = data_copy.drop(columns=[col])
-
-    # Handle any NaN values that might have been introduced
-    if data_copy.isnull().any().any():
-        logging.warning("Found NaN values after preprocessing, filling with 0")
-        data_copy = data_copy.fillna(0)
-    return data_copy
+# Suppress warnings
+warnings.filterwarnings("ignore")
 
 
 def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
-    """Train the model using TPOT."""
+    """Train the model using LightAutoML."""
     try:
         target_column = config["data"]["target_column"]
         if target_column not in data.columns:
@@ -66,24 +25,6 @@ def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
             test_size = config.get("training", {}).get("test_size", 0.2)
 
         click.echo(f"📊 Using {test_size:.1%} of data for testing")
-
-        # Preprocess categorical variables automatically
-        data_processed = preprocess_categorical_data(data, target_column)
-
-        X = data_processed.drop(columns=[target_column])
-        y = data_processed[target_column]
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=42, stratify=y if config["task"]["type"] == "classification" else None
-        )
-
-        # Save feature information for serving
-        feature_info = {
-            "feature_names": X.columns.tolist(),
-            "feature_types": X.dtypes.astype(str).to_dict(),
-            "target_column": target_column,
-            "task_type": config["task"]["type"],
-        }
 
     except KeyError as e:
         logging.error(f"Missing key in config: {e}")
@@ -96,80 +37,204 @@ def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
         raise
 
     task_type = config["task"]["type"]
-    tpot_config = config.get("tpot", {})
+    lama_config = config.get("lightautoml", {})
 
-    # Get TPOT parameters with optimized defaults
-    generations = tpot_config.get("generations", 4)
-    population_size = tpot_config.get("population_size", 20)  # Default 100 is too slow
-    max_time_mins = tpot_config.get("max_time_mins", 5)
-    cv_folds = tpot_config.get("cv_folds", 3)  # Default 5 is too slow
-    n_jobs = tpot_config.get("n_jobs", 1)  # Use 1 to avoid Dask issues, or set higher manually
-
-    # Build TPOT kwargs
-    tpot_kwargs = {
-        "generations": generations,
-        "population_size": population_size,
-        "max_time_mins": max_time_mins,
-        "cv": cv_folds,
-        "n_jobs": n_jobs,
-        "random_state": 42,
-        "verbose": 2,  # Show generation progress
-    }
-
-    click.echo(f"\n🔧 TPOT Configuration:")
-    click.echo(f"   Generations: {generations}")
-    click.echo(f"   Population size: {population_size}")
-    click.echo(f"   Max time: {max_time_mins} minutes")
-    click.echo(f"   Cross-validation folds: {cv_folds}")
-    click.echo(f"   Parallel jobs: {n_jobs}")
+    # Get LightAutoML parameters
+    timeout = lama_config.get("timeout", 300)
+    cpu_limit = lama_config.get("cpu_limit", 4)
+    gpu_ids = lama_config.get("gpu_ids", None)
+    
+    click.echo(f"\n🔧 LightAutoML Configuration:")
+    click.echo(f"   Task: {task_type}")
+    click.echo(f"   Timeout: {timeout}s")
+    click.echo(f"   CPU Limit: {cpu_limit}")
+    click.echo(f"   GPU IDs: {gpu_ids if gpu_ids else 'None (CPU only)'}")
     click.echo()
 
-    if task_type == "classification":
-        model = TPOTClassifier(**tpot_kwargs)
-    elif task_type == "regression":
-        model = TPOTRegressor(**tpot_kwargs)
+    # ===================================================================
+    # CATEGORICAL ENCODING - Detect and encode categorical features
+    # ===================================================================
+    categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
+    
+    # Remove target column from categorical encoding if it's categorical
+    if target_column in categorical_cols:
+        categorical_cols.remove(target_column)
+    
+    encoders = {}
+    feature_encodings = {}
+    
+    if categorical_cols:
+        click.echo(f"🔤 Encoding {len(categorical_cols)} categorical feature(s):")
+        
+        for col in categorical_cols:
+            encoder = LabelEncoder()
+            # Fit and transform the column
+            data[col] = encoder.fit_transform(data[col].astype(str))
+            encoders[col] = encoder
+            
+            # Create human-readable mapping
+            feature_encodings[col] = {
+                str(label): int(idx) for idx, label in enumerate(encoder.classes_)
+            }
+            
+            click.echo(f"   ✓ {col}: {len(encoder.classes_)} unique values")
+            logging.info(f"Encoded {col} with {len(encoder.classes_)} categories: {list(encoder.classes_)[:5]}...")
+        
+        click.echo()
     else:
-        raise ValueError("Unsupported task type.")
+        click.echo("ℹ️  No categorical features detected (all numeric)\n")
+    
+    # ===================================================================
 
     try:
-        logging.info("Starting TPOT optimization...")
-        click.echo("🚀 Starting TPOT AutoML optimization...\n")
-        model.fit(X_train, y_train)
+        logging.info("Starting LightAutoML training...")
+        click.echo("🚀 Setting up LightAutoML environment...\n")
 
+        # Import LightAutoML
+        from lightautoml.automl.presets.tabular_presets import TabularAutoML
+        from lightautoml.tasks import Task
+        
+        # Prepare data - split into train and test
+        train_data, test_data = train_test_split(
+            data, 
+            test_size=test_size, 
+            random_state=42,
+            stratify=data[target_column] if task_type == "classification" else None
+        )
+        
+        click.echo(f"   Training samples: {len(train_data)}")
+        click.echo(f"   Test samples: {len(test_data)}\n")
+        
+        # Create task
+        if task_type == "classification":
+            # Detect if binary or multiclass
+            n_classes = data[target_column].nunique()
+            if n_classes == 2:
+                task = Task('binary')
+                click.echo("   Detected: Binary Classification")
+            else:
+                task = Task('multiclass')
+                click.echo(f"   Detected: Multiclass Classification ({n_classes} classes)")
+        elif task_type == "regression":
+            task = Task('reg')
+            click.echo("   Detected: Regression")
+        else:
+            raise ValueError(f"Unsupported task type: {task_type}")
+
+        click.echo()
+        
+        # Define roles (which column is target)
+        roles = {'target': target_column}
+        
+        # Create AutoML with configuration
+        automl = TabularAutoML(
+            task=task,
+            timeout=timeout,
+            cpu_limit=cpu_limit,
+            gpu_ids=gpu_ids,
+        )
+        
+        click.echo(f"🤖 Training LightAutoML model (timeout: {timeout}s)...\n")
+        logging.info("Training LightAutoML model...")
+        
+        # Train and get out-of-fold predictions
+        oof_predictions = automl.fit_predict(
+            train_data,
+            roles=roles,
+            verbose=1,
+        )
+        
+        click.echo("\n✅ Training complete!")
+        
+        # Evaluate on test set
+        test_predictions = automl.predict(test_data)
+        
+        # Calculate metrics
+        y_test = test_data[target_column].values
+        
+        if task_type == "classification":
+            # For classification, predictions might be probabilities
+            if len(test_predictions.data.shape) > 1 and test_predictions.data.shape[1] > 1:
+                y_pred = test_predictions.data.argmax(axis=1)
+            else:
+                y_pred = (test_predictions.data > 0.5).astype(int).ravel()
+                
+            accuracy = accuracy_score(y_test, y_pred)
+            f1 = f1_score(y_test, y_pred, average='weighted')
+            
+            click.echo(f"\n📊 Test Set Performance:")
+            click.echo(f"   Accuracy: {accuracy:.4f}")
+            click.echo(f"   F1 Score: {f1:.4f}")
+            
+            model_score = accuracy
+            
+        else:  # regression
+            y_pred = test_predictions.data.ravel()
+            mse = mean_squared_error(y_test, y_pred)
+            r2 = r2_score(y_test, y_pred)
+            
+            click.echo(f"\n📊 Test Set Performance:")
+            click.echo(f"   MSE: {mse:.4f}")
+            click.echo(f"   R² Score: {r2:.4f}")
+            
+            model_score = r2
+
+        # Save model
         output_dir = config.get("output_dir", "output")
         os.makedirs(output_dir, exist_ok=True)
 
-        # Save fitted pipeline
-        fitted_pipeline = model.fitted_pipeline_
-        if fitted_pipeline is not None:
-            pipeline_pkl_path = os.path.join(output_dir, "fitted_pipeline.pkl")
-            try:
-                joblib.dump(fitted_pipeline, pipeline_pkl_path)
-                logging.info(f"Fitted pipeline saved to {pipeline_pkl_path}")
-                log_artifact(pipeline_pkl_path)
-            except Exception as e:
-                logging.warning(f"Could not save fitted pipeline: {e}")
+        model_path = os.path.join(output_dir, "lightautoml_model.pkl")
+        joblib.dump(automl, model_path)
+        
+        click.echo(f"\n💾 Model saved to {model_path}")
+        logging.info(f"Model saved to {model_path}")
+        log_artifact(model_path)
 
-        # Save feature metadata and model score
-        try:
-            score = fitted_pipeline.score(X_test, y_test) if fitted_pipeline else None
-            if score is not None:
-                feature_info["model_score"] = float(score)
-                logging.info(f"Model performance score: {score}")
+        # Save encoders if any categorical features were encoded
+        if encoders:
+            encoders_path = os.path.join(output_dir, "encoders.pkl")
+            joblib.dump(encoders, encoders_path)
+            click.echo(f"💾 Encoders saved to {encoders_path}")
+            logging.info(f"Saved {len(encoders)} encoder(s) to {encoders_path}")
+            log_artifact(encoders_path)
+            
+            # Save human-readable feature encodings (for documentation/API)
+            encodings_json_path = os.path.join(output_dir, "feature_encodings.json")
+            with open(encodings_json_path, "w") as f:
+                json.dump(feature_encodings, f, indent=2)
+            click.echo(f"📄 Feature encodings saved to {encodings_json_path}")
+            logging.info(f"Feature encodings saved to {encodings_json_path}")
+            log_artifact(encodings_json_path)
 
-            feature_info_path = os.path.join(output_dir, "feature_info.json")
-            with open(feature_info_path, "w") as f:
-                json.dump(feature_info, f, indent=2)
+        # Save feature information
+        feature_names = [col for col in data.columns if col != target_column]
+        feature_types = {col: str(data[col].dtype) for col in feature_names}
+        
+        feature_info = {
+            "model_name": "LightAutoML",
+            "target_column": target_column,
+            "task_type": task_type,
+            "feature_names": feature_names,
+            "feature_types": feature_types,
+            "categorical_features": list(encoders.keys()) if encoders else [],
+            "model_score": float(model_score),
+            "lightautoml_config": lama_config,
+            "n_samples_train": len(train_data),
+            "n_samples_test": len(test_data),
+        }
+        
+        feature_info_path = os.path.join(output_dir, "feature_info.json")
+        with open(feature_info_path, "w") as f:
+            json.dump(feature_info, f, indent=2)
+        logging.info(f"Feature info saved to {feature_info_path}")
+        log_artifact(feature_info_path)
 
-            logging.info(f"Feature info saved to {feature_info_path}")
-            log_artifact(feature_info_path)
-        except IOError as e:
-            logging.error(f"Error saving feature info: {e}")
-        except Exception as e:
-            logging.error(f"Unexpected error while saving feature info: {e}")
-
-        logging.info("TPOT optimization completed.")
-        return model
+        logging.info("LightAutoML training completed successfully!")
+        click.echo("\n✅ Training completed successfully!\n")
+        
+        return automl
+        
     except Exception as e:
-        logging.error(f"Error during model training or exporting: {e}")
+        logging.error(f"Error during model training: {e}", exc_info=True)
+        click.echo(f"\n❌ Error during training: {e}\n")
         raise

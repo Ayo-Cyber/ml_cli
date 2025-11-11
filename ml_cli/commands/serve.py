@@ -58,8 +58,9 @@ def serve(host: str, port: int, reload: bool, config_file: str):
                 logging.error(f"Error reading config file: {exc}")
 
     # Check if model files exist
-    fitted_pipeline_path = os.path.join(output_dir, "fitted_pipeline.pkl")
-    pipeline_path = os.path.join(output_dir, "best_model_pipeline.py")
+    lightautoml_model_path = os.path.join(output_dir, "lightautoml_model.pkl")
+    fitted_pipeline_path = os.path.join(output_dir, "fitted_pipeline.pkl")  # Legacy TPOT
+    pipeline_path = os.path.join(output_dir, "best_model_pipeline.py")     # Legacy TPOT
     feature_info_path = os.path.join(output_dir, "feature_info.json")
 
     if not os.path.exists(feature_info_path):
@@ -67,9 +68,18 @@ def serve(host: str, port: int, reload: bool, config_file: str):
         logging.warning("No trained model found!")
         click.secho("   Please run 'ml train' first to train a model.", fg="yellow")
         click.secho("   The API will start but predictions will not work until a model is available.\n", fg="yellow")
-    elif os.path.exists(fitted_pipeline_path):
+    elif os.path.exists(lightautoml_model_path):
         click.secho("✅ Trained model found! API will be fully functional.", fg="green")
-        logging.info("Trained model found! API will be fully functional.")
+        logging.info("Trained LightAutoML model found! API will be fully functional.")
+        click.secho(f"   🤖 LightAutoML Model: {lightautoml_model_path}", fg="blue")
+        click.secho(f"   📊 Features: {feature_info_path}", fg="blue")
+        # Check for encoders
+        encoders_path = os.path.join(output_dir, "encoders.pkl")
+        if os.path.exists(encoders_path):
+            click.secho(f"   🔤 Categorical Encoders: {encoders_path}", fg="blue")
+    elif os.path.exists(fitted_pipeline_path):
+        click.secho("✅ Legacy TPOT model found! API will be functional.", fg="green")
+        logging.info("Legacy TPOT model found! API will be functional.")
         click.secho(f"   🤖 Fitted Pipeline: {fitted_pipeline_path}", fg="blue")
         click.secho(f"   📊 Features: {feature_info_path}", fg="blue")
     elif os.path.exists(pipeline_path):

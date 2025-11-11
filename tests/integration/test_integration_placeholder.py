@@ -18,8 +18,14 @@ def test_full_ml_pipeline(mock_confirm, mock_select, mock_text):
         "current",  # For 'Where do you want to initialize the project?'
         "classification",  # For 'Please select the task type:'
     ]
-    mock_confirm.return_value.ask.return_value = True  # For 'Did you mean X?'
-    mock_text.return_value.ask.return_value = "0.2"  # For test size
+    mock_confirm.return_value.ask.side_effect = [
+        True,   # For 'Did you mean X?' (target column)
+        False,  # For 'Use GPU if available?'
+    ]
+    mock_text.return_value.ask.side_effect = [
+        "0.2",  # For test size
+        "",     # For GPU IDs (empty since GPU is False)
+    ]
 
     runner = CliRunner()
 
@@ -34,9 +40,9 @@ def test_full_ml_pipeline(mock_confirm, mock_select, mock_text):
             # Copy data to current dir
             data.to_csv("data.csv", index=False)
 
-            # 1. Initialize project (using 1 generation for faster testing)
-            # Input: data_path, target_column, output_dir, generations, population_size, max_time_mins
-            result = runner.invoke(cli, ["init"], input="data.csv\ntarget\noutput\n1\n10\n2\n")
+            # 1. Initialize project (using short timeout for faster testing)
+            # Input: data_path, target_column, output_dir, timeout, cpu_limit
+            result = runner.invoke(cli, ["init"], input="data.csv\ntarget\noutput\n60\n2\n")
             assert result.exit_code == 0
             assert os.path.exists("config.yaml")
 
@@ -53,7 +59,7 @@ def test_full_ml_pipeline(mock_confirm, mock_select, mock_text):
             # 4. Train model
             result = runner.invoke(cli, ["train"])
             assert result.exit_code == 0
-            assert os.path.exists("output/fitted_pipeline.pkl")
+            assert os.path.exists("output/lightautoml_model.pkl")
 
             # 5. Make predictions
             result = runner.invoke(cli, ["predict", "-i", "data.csv", "-o", "predictions.csv", "-m", "output"])

@@ -28,7 +28,7 @@ def test_train_command():
             # Create a dummy config.yaml file
             with open("config.yaml", "w") as f:
                 f.write(
-                    f"data:\n  data_path: data.csv\n  target_column: target\ntask:\n  type: classification\noutput_dir: {tmpdir}/output\ntpot:\n  generations: 1"
+                    f"data:\n  data_path: data.csv\n  target_column: target\ntask:\n  type: classification\noutput_dir: {tmpdir}/output\nlightautoml:\n  timeout: 60\n  cpu_limit: 2"
                 )
 
             # Create a dummy data.csv file
@@ -38,7 +38,7 @@ def test_train_command():
 
             result = runner.invoke(cli, ["train", "--config", "config.yaml"])
             assert result.exit_code == 0
-            assert os.path.exists(f"{tmpdir}/output/fitted_pipeline.pkl")
+            assert os.path.exists(f"{tmpdir}/output/lightautoml_model.pkl")
 
 
 def test_predict_command():
@@ -48,15 +48,15 @@ def test_predict_command():
             output_dir = os.path.join(tmpdir, "output")
             os.makedirs(output_dir, exist_ok=True)
 
-            # Create a dummy fitted model pipeline file
+            # Create a dummy fitted model pipeline file (simulating LightAutoML model)
             pipeline = Pipeline([("scaler", StandardScaler()), ("logreg", LogisticRegression())])
             X_dummy = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
             y_dummy = np.array([0, 1, 0, 1])
             pipeline.fit(X_dummy, y_dummy)
-            joblib.dump(pipeline, os.path.join(output_dir, "fitted_pipeline.pkl"))
+            joblib.dump(pipeline, os.path.join(output_dir, "lightautoml_model.pkl"))
 
             # Create a dummy feature_info.json file
-            feature_info = {"feature_names": ["feature1", "feature2"]}
+            feature_info = {"feature_names": ["feature1", "feature2"], "task_type": "classification"}
             with open(os.path.join(output_dir, "feature_info.json"), "w") as f:
                 json.dump(feature_info, f)
 
@@ -125,8 +125,14 @@ def test_init_command(mock_confirm, mock_select, mock_text):
         "current",  # For 'Where do you want to initialize the project?'
         "classification",  # For 'Please select the task type:'
     ]
-    mock_confirm.return_value.ask.return_value = True  # For 'Did you mean X?'
-    mock_text.return_value.ask.return_value = "0.2"  # For test size
+    mock_confirm.return_value.ask.side_effect = [
+        True,   # For 'Did you mean X?' (target column)
+        False,  # For 'Use GPU if available?'
+    ]
+    mock_text.return_value.ask.side_effect = [
+        "0.2",  # For test size
+        "",     # For GPU IDs (empty since GPU is False)
+    ]
 
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -137,8 +143,8 @@ def test_init_command(mock_confirm, mock_select, mock_text):
             data.to_csv(data_file, index=False)
 
             # Use input to provide answers to prompts (for click.prompt)
-            # data_path, target_column, output_dir, generations, population_size, max_time_mins
-            result = runner.invoke(cli, ["init"], input=f"{data_file}\nChurn\noutput\n1\n10\n2\n")
+            # data_path, target_column, output_dir, timeout, cpu_limit
+            result = runner.invoke(cli, ["init"], input=f"{data_file}\nChurn\noutput\n60\n2\n")
             assert result.exit_code == 0, f"Command failed with: {result.output}"
             assert os.path.exists("config.yaml")
 

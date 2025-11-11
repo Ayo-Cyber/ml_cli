@@ -422,14 +422,22 @@ def download_data(data_path, ssl_verify, target_directory):
 
 
 def generate_realistic_example_from_stats(feature_info: dict) -> dict[str, Any]:
-    """Generate realistic examples based on feature statistics from the actual data"""
+    """Generate realistic examples based on feature statistics from the actual data.
+    For categorical features, uses placeholder values that will be replaced by encoders."""
     example: Dict[str, Any] = {}
+    
+    # categorical_features is a LIST of categorical feature names (not a dict)
+    categorical_feature_names = feature_info.get("categorical_features", [])
 
     # Check if we have feature statistics
     if "feature_statistics" in feature_info:
         stats = feature_info["feature_statistics"]
         for feature in feature_info.get("feature_names", []):
-            if feature in stats and isinstance(stats[feature], dict):
+            # Check if this is a categorical feature
+            if feature in categorical_feature_names:
+                # For categorical features, use placeholder (will be replaced by API with actual values)
+                example[feature] = 0
+            elif feature in stats and isinstance(stats[feature], dict):
                 feature_stats = stats[feature]
 
                 # Use mean if available, otherwise median, otherwise midpoint of min/max
@@ -452,24 +460,40 @@ def generate_realistic_example_from_stats(feature_info: dict) -> dict[str, Any]:
     else:
         # Fallback if no statistics available
         for feature in feature_info.get("feature_names", []):
-            example[feature] = 1.0
+            # Check if this is a categorical feature
+            if feature in categorical_feature_names:
+                # For categorical features, use placeholder
+                example[feature] = 0
+            else:
+                example[feature] = 1.0
 
     return example
 
 
 def load_model(output_dir: str):
-    """Load model and return the objects instead of setting globals"""
+    """Load LightAutoML model and return the objects instead of setting globals"""
     try:
-        pipeline_path = Path(output_dir) / "fitted_pipeline.pkl"
+        model_path = Path(output_dir) / "lightautoml_model.pkl"
         feature_info_path = Path(output_dir) / "feature_info.json"
+        
+        # Debug logging
+        logging.info(f"Looking for model in: {output_dir}")
+        logging.info(f"  Absolute path: {Path(output_dir).absolute()}")
+        logging.info(f"  Model file exists: {model_path.exists()}")
+        logging.info(f"  Feature info exists: {feature_info_path.exists()}")
 
-        if not pipeline_path.exists() or not feature_info_path.exists():
+        if not model_path.exists() or not feature_info_path.exists():
             logging.warning("Model files not found. API will start but predictions will not work.")
             return None, None, None, None
 
-        pipeline = joblib.load(pipeline_path)
+        # Load feature info first to get task type
         with open(feature_info_path, "r", encoding="utf-8") as f:
             feature_info = json.load(f)
+
+        # Load LightAutoML model using the core module
+        from ml_cli.core.predict import load_lightautoml_model
+
+        pipeline = load_lightautoml_model(str(output_dir))
 
         logging.info(f"Feature info keys: {feature_info.keys()}")
         logging.info(f"Feature names: {feature_info.get('feature_names', [])}")
@@ -778,21 +802,66 @@ def is_valid_directory_name(name):
 
 
 def convert_numpy_types(obj):
-    """Convert NumPy types to native Python types for JSON serialization"""
-    if isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    elif isinstance(obj, np.bool_):
-        return bool(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif isinstance(obj, (list, tuple)):
-        return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, dict):
+    """Convert NumPy / pandas types to native Python types for JSON serialization.
+
+    Handles:
+    - numpy scalar types (np.integer, np.floating, np.bool_, np.generic)
+    - numpy arrays -> lists
+    - pandas Series -> lists
+    - pandas DataFrame -> list of records
+    - pandas/NumPy missing values -> None
+    - nested lists/dicts recursively
+    """
+    # pandas NA / numpy nan -> None
+    try:
+        if pd.isna(obj):
+            return None
+    except Exception:
+        # pd.isna may raise for some custom objects; ignore
+        pass
+
+    # NumPy scalar (covers np.integer, np.floating, np.bool_, etc.)
+    if isinstance(obj, np.generic):
+        try:
+            return obj.item()
+        except Exception:
+            # Fallback to Python cast attempts
+            if isinstance(obj, np.integer):
+                return int(obj)
+            if isinstance(obj, np.floating):
+                return float(obj)
+            if isinstance(obj, np.bool_):
+                return bool(obj)
+
+    # NumPy arrays
+    if isinstance(obj, np.ndarray):
+        return [convert_numpy_types(x) for x in obj.tolist()]
+
+    # pandas Series -> list
+    if isinstance(obj, pd.Series):
+        return [convert_numpy_types(x) for x in obj.tolist()]
+
+    # pandas DataFrame -> list of records (dicts)
+    if isinstance(obj, pd.DataFrame):
+        records = obj.to_dict(orient="records")
+        return [convert_numpy_types(r) for r in records]
+
+    # dict -> recurse
+    if isinstance(obj, dict):
         return {key: convert_numpy_types(value) for key, value in obj.items()}
-    else:
-        return obj
+
+    # list/tuple -> recurse
+    if isinstance(obj, (list, tuple)):
+        return [convert_numpy_types(item) for item in obj]
+
+    # Fallback: if object has 'tolist' (like some array-likes), use it
+    if hasattr(obj, "tolist") and not isinstance(obj, (str, bytes)):
+        try:
+            return convert_numpy_types(obj.tolist())
+        except Exception:
+            pass
+
+    return obj
 
 
 def safe_array_check(arr):
@@ -804,7 +873,11 @@ def safe_array_check(arr):
 
 
 def format_prediction_response(prediction, feature_info, probabilities=None):
-    """Format prediction response based on task type"""
+    """Format prediction response based on task type.
+    
+    Note: prediction should already be class labels (not probabilities) for classification.
+    The make_predictions() function in core/predict.py handles this conversion.
+    """
     task_type = feature_info.get("task_type", "unknown").lower()
 
     # Safely get prediction value
@@ -822,15 +895,14 @@ def format_prediction_response(prediction, feature_info, probabilities=None):
 
     # Add task-specific information
     if task_type == "classification":
+        # prediction_value should already be a class label (0, 1, 2, etc.)
+        result["predicted_class"] = prediction_value
+        
+        # Add probability information if available
         if probabilities is not None and safe_array_check(probabilities):
             prob_list = convert_numpy_types(probabilities)
             result["probabilities"] = prob_list
             result["confidence"] = float(max(prob_list)) if isinstance(prob_list, list) and prob_list else None
-
-        # For classification, add class information if available
-        target_column = feature_info.get("target_column")
-        if target_column:
-            result["predicted_class"] = prediction_value
 
     elif task_type == "regression":
         # For regression, the prediction is the actual value
@@ -841,4 +913,7 @@ def format_prediction_response(prediction, feature_info, probabilities=None):
         result["cluster_id"] = prediction_value
         result["cluster"] = f"Cluster_{prediction_value}" if prediction_value is not None else "Unknown"
 
+    # Convert entire result dict to ensure all numpy types are converted
+    result = convert_numpy_types(result)
+    
     return result

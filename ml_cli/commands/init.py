@@ -141,12 +141,13 @@ def init(format: str, ssl_verify: bool):
         # 9) Output dir (name validity handled in util; it returns a str always)
         output_dir = get_validated_output_dir() or "output"
 
-        # 10) TPOT configuration (optimized defaults for faster training)
-        click.echo("\n🔧 TPOT Configuration:")
-        click.echo("   (Lower values = faster training, higher values = better models)")
-        generations = click.prompt("   Number of generations", type=int, default=4)
-        population_size = click.prompt("   Population size", type=int, default=20)
-        max_time_mins = click.prompt("   Max time in minutes", type=int, default=5)
+        # 10) LightAutoML configuration
+        click.echo("\n🔧 LightAutoML Configuration:")
+        click.echo("   (Timeout controls training time, higher CPU limit = faster training)")
+        timeout = click.prompt("   Training timeout (seconds)", type=int, default=300)
+        cpu_limit = click.prompt("   CPU cores to use", type=int, default=4)
+        use_gpu = click.confirm("   Use GPU if available?", default=False)
+        gpu_ids = click.prompt("   GPU IDs (comma-separated, e.g., '0,1')", type=str, default="") if use_gpu else None
 
         # 11) Build config
         config_data = {
@@ -156,12 +157,10 @@ def init(format: str, ssl_verify: bool):
             },
             "task": {"type": task_type},
             "output_dir": output_dir,
-            "tpot": {
-                "generations": generations,
-                "population_size": population_size,
-                "max_time_mins": max_time_mins,
-                "cv_folds": 3,
-                "n_jobs": 1,  # Use 1 to avoid Dask issues
+            "lightautoml": {
+                "timeout": timeout,
+                "cpu_limit": cpu_limit,
+                "gpu_ids": gpu_ids if gpu_ids and gpu_ids.strip() else None,
             },
             "training": {"test_size": test_size, "random_state": 42},
         }
