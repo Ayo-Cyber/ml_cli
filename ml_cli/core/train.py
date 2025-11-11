@@ -7,6 +7,7 @@ import pandas as pd
 import click
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score
+from sklearn.preprocessing import LabelEncoder
 from ml_cli.utils.utils import log_artifact
 
 # Suppress warnings
@@ -49,6 +50,41 @@ def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
     click.echo(f"   CPU Limit: {cpu_limit}")
     click.echo(f"   GPU IDs: {gpu_ids if gpu_ids else 'None (CPU only)'}")
     click.echo()
+
+    # ===================================================================
+    # CATEGORICAL ENCODING - Detect and encode categorical features
+    # ===================================================================
+    categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
+    
+    # Remove target column from categorical encoding if it's categorical
+    if target_column in categorical_cols:
+        categorical_cols.remove(target_column)
+    
+    encoders = {}
+    feature_encodings = {}
+    
+    if categorical_cols:
+        click.echo(f"🔤 Encoding {len(categorical_cols)} categorical feature(s):")
+        
+        for col in categorical_cols:
+            encoder = LabelEncoder()
+            # Fit and transform the column
+            data[col] = encoder.fit_transform(data[col].astype(str))
+            encoders[col] = encoder
+            
+            # Create human-readable mapping
+            feature_encodings[col] = {
+                str(label): int(idx) for idx, label in enumerate(encoder.classes_)
+            }
+            
+            click.echo(f"   ✓ {col}: {len(encoder.classes_)} unique values")
+            logging.info(f"Encoded {col} with {len(encoder.classes_)} categories: {list(encoder.classes_)[:5]}...")
+        
+        click.echo()
+    else:
+        click.echo("ℹ️  No categorical features detected (all numeric)\n")
+    
+    # ===================================================================
 
     try:
         logging.info("Starting LightAutoML training...")
@@ -154,6 +190,22 @@ def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
         logging.info(f"Model saved to {model_path}")
         log_artifact(model_path)
 
+        # Save encoders if any categorical features were encoded
+        if encoders:
+            encoders_path = os.path.join(output_dir, "encoders.pkl")
+            joblib.dump(encoders, encoders_path)
+            click.echo(f"💾 Encoders saved to {encoders_path}")
+            logging.info(f"Saved {len(encoders)} encoder(s) to {encoders_path}")
+            log_artifact(encoders_path)
+            
+            # Save human-readable feature encodings (for documentation/API)
+            encodings_json_path = os.path.join(output_dir, "feature_encodings.json")
+            with open(encodings_json_path, "w") as f:
+                json.dump(feature_encodings, f, indent=2)
+            click.echo(f"📄 Feature encodings saved to {encodings_json_path}")
+            logging.info(f"Feature encodings saved to {encodings_json_path}")
+            log_artifact(encodings_json_path)
+
         # Save feature information
         feature_names = [col for col in data.columns if col != target_column]
         feature_types = {col: str(data[col].dtype) for col in feature_names}
@@ -164,6 +216,7 @@ def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
             "task_type": task_type,
             "feature_names": feature_names,
             "feature_types": feature_types,
+            "categorical_features": list(encoders.keys()) if encoders else [],
             "model_score": float(model_score),
             "lightautoml_config": lama_config,
             "n_samples_train": len(train_data),

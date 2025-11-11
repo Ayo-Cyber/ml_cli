@@ -58,7 +58,7 @@ def predict(input_path: str, output_path: str, model_path: str):
         model = load_lightautoml_model(model_path)
 
         # Make predictions using LightAutoML
-        predictions, _ = make_predictions(model, new_data, task_type)
+        predictions, _, probabilities = make_predictions(model, new_data, task_type)
 
         # Save the predictions
         output_dir = os.path.dirname(output_path)
