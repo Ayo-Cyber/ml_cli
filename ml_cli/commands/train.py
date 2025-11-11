@@ -58,8 +58,8 @@ def train(config_file: str):
         if categorical_cols:
             click.secho(f"Found categorical columns: {categorical_cols}", fg="yellow")
             logging.info(f"Found categorical columns: {categorical_cols}")
-            click.secho("PyCaret will automatically preprocess categorical data...", fg="blue")
-            logging.info("PyCaret will automatically preprocess categorical data...")
+            click.secho("LightAutoML will automatically handle categorical data...", fg="blue")
+            logging.info("LightAutoML will automatically handle categorical data...")
 
         # Train the model
         train_model(data, config)

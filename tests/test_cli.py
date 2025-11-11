@@ -25,10 +25,10 @@ def test_train_command():
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as tmpdir:
         with runner.isolated_filesystem(temp_dir=tmpdir):
-            # Create a dummy config.yaml file with PyCaret config
+            # Create a dummy config.yaml file
             with open("config.yaml", "w") as f:
                 f.write(
-                    f"data:\n  data_path: data.csv\n  target_column: target\ntask:\n  type: classification\noutput_dir: {tmpdir}/output\npycaret:\n  normalize: true\n  feature_selection: true\n  remove_outliers: false\n  n_select: 1\n  session_id: 42\n  fold: 3"
+                    f"data:\n  data_path: data.csv\n  target_column: target\ntask:\n  type: classification\noutput_dir: {tmpdir}/output\nlightautoml:\n  timeout: 60\n  cpu_limit: 2"
                 )
 
             # Create a dummy data.csv file
@@ -38,7 +38,7 @@ def test_train_command():
 
             result = runner.invoke(cli, ["train", "--config", "config.yaml"])
             assert result.exit_code == 0
-            assert os.path.exists(f"{tmpdir}/output/pycaret_model.pkl")
+            assert os.path.exists(f"{tmpdir}/output/lightautoml_model.pkl")
 
 
 def test_predict_command():
@@ -48,14 +48,14 @@ def test_predict_command():
             output_dir = os.path.join(tmpdir, "output")
             os.makedirs(output_dir, exist_ok=True)
 
-            # Create a dummy fitted model pipeline file (pycaret_model.pkl)
+            # Create a dummy fitted model pipeline file (simulating LightAutoML model)
             pipeline = Pipeline([("scaler", StandardScaler()), ("logreg", LogisticRegression())])
             X_dummy = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
             y_dummy = np.array([0, 1, 0, 1])
             pipeline.fit(X_dummy, y_dummy)
-            joblib.dump(pipeline, os.path.join(output_dir, "pycaret_model.pkl"))
+            joblib.dump(pipeline, os.path.join(output_dir, "lightautoml_model.pkl"))
 
-            # Create a dummy feature_info.json file with task_type
+            # Create a dummy feature_info.json file
             feature_info = {"feature_names": ["feature1", "feature2"], "task_type": "classification"}
             with open(os.path.join(output_dir, "feature_info.json"), "w") as f:
                 json.dump(feature_info, f)
@@ -119,20 +119,20 @@ def test_serve_command():
 @patch("ml_cli.commands.init.questionary.text")
 @patch("ml_cli.commands.init.questionary.select")
 @patch("ml_cli.commands.init.questionary.confirm")
-@patch("ml_cli.commands.init.click.confirm")
-@patch("ml_cli.commands.init.click.prompt")
-def test_init_command(mock_click_prompt, mock_click_confirm, mock_questionary_confirm, mock_select, mock_text):
+def test_init_command(mock_confirm, mock_select, mock_text):
     # Configure the mocks to return predefined answers
     mock_select.return_value.ask.side_effect = [
         "current",  # For 'Where do you want to initialize the project?'
         "classification",  # For 'Please select the task type:'
     ]
-    mock_questionary_confirm.return_value.ask.return_value = True  # For 'Did you mean X?'
-    mock_text.return_value.ask.return_value = "0.2"  # For test size
-    
-    # Mock click prompts and confirms for PyCaret config
-    mock_click_confirm.side_effect = [True, True, False]  # normalize=True, feature_selection=True, remove_outliers=False
-    mock_click_prompt.return_value = 3  # n_select=3
+    mock_confirm.return_value.ask.side_effect = [
+        True,   # For 'Did you mean X?' (target column)
+        False,  # For 'Use GPU if available?'
+    ]
+    mock_text.return_value.ask.side_effect = [
+        "0.2",  # For test size
+        "",     # For GPU IDs (empty since GPU is False)
+    ]
 
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -142,9 +142,9 @@ def test_init_command(mock_click_prompt, mock_click_confirm, mock_questionary_co
             data_file = "test_data.csv"
             data.to_csv(data_file, index=False)
 
-            # Use input to provide answers to prompts (for click.prompt that aren't mocked)
-            # data_path, target_column, output_dir
-            result = runner.invoke(cli, ["init"], input=f"{data_file}\nChurn\noutput\n")
+            # Use input to provide answers to prompts (for click.prompt)
+            # data_path, target_column, output_dir, timeout, cpu_limit
+            result = runner.invoke(cli, ["init"], input=f"{data_file}\nChurn\noutput\n60\n2\n")
             assert result.exit_code == 0, f"Command failed with: {result.output}"
             assert os.path.exists("config.yaml")
 

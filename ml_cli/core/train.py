@@ -2,8 +2,11 @@ import os
 import logging
 import warnings
 import json
+import joblib
 import pandas as pd
 import click
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score
 from ml_cli.utils.utils import log_artifact
 
 # Suppress warnings
@@ -11,7 +14,7 @@ warnings.filterwarnings("ignore")
 
 
 def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
-    """Train the model using PyCaret."""
+    """Train the model using LightAutoML."""
     try:
         target_column = config["data"]["target_column"]
         if target_column not in data.columns:
@@ -33,116 +36,138 @@ def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
         raise
 
     task_type = config["task"]["type"]
-    pycaret_config = config.get("pycaret", {})
+    lama_config = config.get("lightautoml", {})
 
-    # Get PyCaret parameters
-    normalize = pycaret_config.get("normalize", True)
-    feature_selection = pycaret_config.get("feature_selection", True)
-    remove_outliers = pycaret_config.get("remove_outliers", False)
-    n_select = pycaret_config.get("n_select", 3)
-    session_id = pycaret_config.get("session_id", 42)
-    fold = pycaret_config.get("fold", 3)
-    verbose = pycaret_config.get("verbose", False)
-
-    click.echo(f"\n🔧 PyCaret Configuration:")
+    # Get LightAutoML parameters
+    timeout = lama_config.get("timeout", 300)
+    cpu_limit = lama_config.get("cpu_limit", 4)
+    gpu_ids = lama_config.get("gpu_ids", None)
+    
+    click.echo(f"\n🔧 LightAutoML Configuration:")
     click.echo(f"   Task: {task_type}")
-    click.echo(f"   Normalize: {normalize}")
-    click.echo(f"   Feature Selection: {feature_selection}")
-    click.echo(f"   Remove Outliers: {remove_outliers}")
-    click.echo(f"   Models to compare: {n_select}")
-    click.echo(f"   CV Folds: {fold}")
+    click.echo(f"   Timeout: {timeout}s")
+    click.echo(f"   CPU Limit: {cpu_limit}")
+    click.echo(f"   GPU IDs: {gpu_ids if gpu_ids else 'None (CPU only)'}")
     click.echo()
 
     try:
-        logging.info("Starting PyCaret setup...")
-        click.echo("� Setting up PyCaret environment...\n")
+        logging.info("Starting LightAutoML training...")
+        click.echo("🚀 Setting up LightAutoML environment...\n")
 
-        # Import appropriate PyCaret module based on task type
+        # Import LightAutoML
+        from lightautoml.automl.presets.tabular_presets import TabularAutoML
+        from lightautoml.tasks import Task
+        
+        # Prepare data - split into train and test
+        train_data, test_data = train_test_split(
+            data, 
+            test_size=test_size, 
+            random_state=42,
+            stratify=data[target_column] if task_type == "classification" else None
+        )
+        
+        click.echo(f"   Training samples: {len(train_data)}")
+        click.echo(f"   Test samples: {len(test_data)}\n")
+        
+        # Create task
         if task_type == "classification":
-            from pycaret.classification import setup, compare_models, save_model, finalize_model, pull
-            
-            # Setup experiment
-            exp = setup(
-                data=data,
-                target=target_column,
-                train_size=1 - test_size,
-                normalize=normalize,
-                feature_selection=feature_selection,
-                remove_outliers=remove_outliers,
-                session_id=session_id,
-                fold=fold,
-                verbose=verbose,
-                html=False,
-                silent=True,
-                n_jobs=1,
-            )
-            
+            # Detect if binary or multiclass
+            n_classes = data[target_column].nunique()
+            if n_classes == 2:
+                task = Task('binary')
+                click.echo("   Detected: Binary Classification")
+            else:
+                task = Task('multiclass')
+                click.echo(f"   Detected: Multiclass Classification ({n_classes} classes)")
         elif task_type == "regression":
-            from pycaret.regression import setup, compare_models, save_model, finalize_model, pull
-            
-            # Setup experiment
-            exp = setup(
-                data=data,
-                target=target_column,
-                train_size=1 - test_size,
-                normalize=normalize,
-                feature_selection=feature_selection,
-                remove_outliers=remove_outliers,
-                session_id=session_id,
-                fold=fold,
-                verbose=verbose,
-                html=False,
-                silent=True,
-                n_jobs=1,
-            )
+            task = Task('reg')
+            click.echo("   Detected: Regression")
         else:
             raise ValueError(f"Unsupported task type: {task_type}")
 
-        click.echo("✅ PyCaret environment setup complete!\n")
-        
-        # Compare models
-        logging.info("Comparing models...")
-        click.echo(f"🤖 Comparing top {n_select} models...\n")
-        
-        best_models = compare_models(
-            n_select=n_select,
-            sort='Accuracy' if task_type == 'classification' else 'R2',
-            verbose=False,
-        )
-        
-        # Get comparison results
-        comparison_df = pull()
-        click.echo("\n📊 Model Comparison Results:")
-        click.echo(comparison_df.to_string(index=False))
         click.echo()
         
-        # Select best model
-        best_model = best_models[0] if isinstance(best_models, list) else best_models
-        model_name = type(best_model).__name__
-        click.echo(f"\n✅ Best model selected: {model_name}")
+        # Define roles (which column is target)
+        roles = {'target': target_column}
         
-        # Finalize model (train on full dataset)
-        logging.info(f"Finalizing model: {model_name}")
-        click.echo(f"� Training final {model_name} model on full dataset...\n")
-        final_model = finalize_model(best_model)
+        # Create AutoML with configuration
+        automl = TabularAutoML(
+            task=task,
+            timeout=timeout,
+            cpu_limit=cpu_limit,
+            gpu_ids=gpu_ids,
+        )
+        
+        click.echo(f"🤖 Training LightAutoML model (timeout: {timeout}s)...\n")
+        logging.info("Training LightAutoML model...")
+        
+        # Train and get out-of-fold predictions
+        oof_predictions = automl.fit_predict(
+            train_data,
+            roles=roles,
+            verbose=1,
+        )
+        
+        click.echo("\n✅ Training complete!")
+        
+        # Evaluate on test set
+        test_predictions = automl.predict(test_data)
+        
+        # Calculate metrics
+        y_test = test_data[target_column].values
+        
+        if task_type == "classification":
+            # For classification, predictions might be probabilities
+            if len(test_predictions.data.shape) > 1 and test_predictions.data.shape[1] > 1:
+                y_pred = test_predictions.data.argmax(axis=1)
+            else:
+                y_pred = (test_predictions.data > 0.5).astype(int).ravel()
+                
+            accuracy = accuracy_score(y_test, y_pred)
+            f1 = f1_score(y_test, y_pred, average='weighted')
+            
+            click.echo(f"\n📊 Test Set Performance:")
+            click.echo(f"   Accuracy: {accuracy:.4f}")
+            click.echo(f"   F1 Score: {f1:.4f}")
+            
+            model_score = accuracy
+            
+        else:  # regression
+            y_pred = test_predictions.data.ravel()
+            mse = mean_squared_error(y_test, y_pred)
+            r2 = r2_score(y_test, y_pred)
+            
+            click.echo(f"\n📊 Test Set Performance:")
+            click.echo(f"   MSE: {mse:.4f}")
+            click.echo(f"   R² Score: {r2:.4f}")
+            
+            model_score = r2
 
         # Save model
         output_dir = config.get("output_dir", "output")
         os.makedirs(output_dir, exist_ok=True)
 
-        model_path = os.path.join(output_dir, "pycaret_model")
-        save_model(final_model, model_path)
+        model_path = os.path.join(output_dir, "lightautoml_model.pkl")
+        joblib.dump(automl, model_path)
         
-        click.echo(f"\n💾 Model saved to {model_path}.pkl")
-        logging.info(f"Model saved to {model_path}.pkl")
-        log_artifact(f"{model_path}.pkl")
+        click.echo(f"\n💾 Model saved to {model_path}")
+        logging.info(f"Model saved to {model_path}")
+        log_artifact(model_path)
 
         # Save feature information
+        feature_names = [col for col in data.columns if col != target_column]
+        feature_types = {col: str(data[col].dtype) for col in feature_names}
+        
         feature_info = {
-            "model_name": model_name,
+            "model_name": "LightAutoML",
             "target_column": target_column,
             "task_type": task_type,
-            "pycaret_config": pycaret_config,
+            "feature_names": feature_names,
+            "feature_types": feature_types,
+            "model_score": float(model_score),
+            "lightautoml_config": lama_config,
+            "n_samples_train": len(train_data),
+            "n_samples_test": len(test_data),
         }
         
         feature_info_path = os.path.join(output_dir, "feature_info.json")
@@ -151,13 +176,12 @@ def train_model(data: pd.DataFrame, config: dict, test_size: float = None):
         logging.info(f"Feature info saved to {feature_info_path}")
         log_artifact(feature_info_path)
 
-        logging.info("PyCaret training completed successfully!")
+        logging.info("LightAutoML training completed successfully!")
         click.echo("\n✅ Training completed successfully!\n")
         
-        return final_model
+        return automl
         
     except Exception as e:
         logging.error(f"Error during model training: {e}", exc_info=True)
         click.echo(f"\n❌ Error during training: {e}\n")
-        raise
         raise

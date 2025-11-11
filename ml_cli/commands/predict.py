@@ -32,7 +32,7 @@ Usage example:
     "-m",
     type=click.Path(exists=True),
     required=True,
-    help='The absolute or relative path to the directory containing the trained model (e.g., "pycaret_model.pkl") and feature information ("feature_info.json").',
+    help='The absolute or relative path to the directory containing the trained model (e.g., "lightautoml_model.pkl") and feature information ("feature_info.json").',
 )
 def predict(input_path: str, output_path: str, model_path: str):
     """Make predictions on new data using a trained model."""
@@ -52,12 +52,12 @@ def predict(input_path: str, output_path: str, model_path: str):
 
         task_type = feature_info.get("task_type", "classification")
 
-        # Load PyCaret model
-        from ml_cli.core.predict import load_pycaret_model, make_predictions
+        # Load LightAutoML model
+        from ml_cli.core.predict import load_lightautoml_model, make_predictions
 
-        model = load_pycaret_model(model_path, task_type)
+        model = load_lightautoml_model(model_path)
 
-        # Make predictions using PyCaret
+        # Make predictions using LightAutoML
         predictions, _ = make_predictions(model, new_data, task_type)
 
         # Save the predictions

@@ -141,13 +141,13 @@ def init(format: str, ssl_verify: bool):
         # 9) Output dir (name validity handled in util; it returns a str always)
         output_dir = get_validated_output_dir() or "output"
 
-        # 10) PyCaret configuration
-        click.echo("\n🔧 PyCaret Configuration:")
-        click.echo("   (Enable preprocessing and model selection options)")
-        normalize = click.confirm("   Normalize features?", default=True)
-        feature_selection = click.confirm("   Enable feature selection?", default=True)
-        remove_outliers = click.confirm("   Remove outliers?", default=False)
-        n_select = click.prompt("   Number of top models to compare", type=int, default=3)
+        # 10) LightAutoML configuration
+        click.echo("\n🔧 LightAutoML Configuration:")
+        click.echo("   (Timeout controls training time, higher CPU limit = faster training)")
+        timeout = click.prompt("   Training timeout (seconds)", type=int, default=300)
+        cpu_limit = click.prompt("   CPU cores to use", type=int, default=4)
+        use_gpu = click.confirm("   Use GPU if available?", default=False)
+        gpu_ids = click.prompt("   GPU IDs (comma-separated, e.g., '0,1')", type=str, default="") if use_gpu else None
 
         # 11) Build config
         config_data = {
@@ -157,14 +157,10 @@ def init(format: str, ssl_verify: bool):
             },
             "task": {"type": task_type},
             "output_dir": output_dir,
-            "pycaret": {
-                "normalize": normalize,
-                "feature_selection": feature_selection,
-                "remove_outliers": remove_outliers,
-                "n_select": n_select,
-                "session_id": 42,
-                "fold": 3,
-                "verbose": False,
+            "lightautoml": {
+                "timeout": timeout,
+                "cpu_limit": cpu_limit,
+                "gpu_ids": gpu_ids if gpu_ids and gpu_ids.strip() else None,
             },
             "training": {"test_size": test_size, "random_state": 42},
         }

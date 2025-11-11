@@ -458,9 +458,9 @@ def generate_realistic_example_from_stats(feature_info: dict) -> dict[str, Any]:
 
 
 def load_model(output_dir: str):
-    """Load PyCaret model and return the objects instead of setting globals"""
+    """Load LightAutoML model and return the objects instead of setting globals"""
     try:
-        model_path = Path(output_dir) / "pycaret_model.pkl"
+        model_path = Path(output_dir) / "lightautoml_model.pkl"
         feature_info_path = Path(output_dir) / "feature_info.json"
 
         if not model_path.exists() or not feature_info_path.exists():
@@ -471,12 +471,10 @@ def load_model(output_dir: str):
         with open(feature_info_path, "r", encoding="utf-8") as f:
             feature_info = json.load(f)
 
-        task_type = feature_info.get("task_type", "classification")
+        # Load LightAutoML model using the core module
+        from ml_cli.core.predict import load_lightautoml_model
 
-        # Load PyCaret model using the core module
-        from ml_cli.core.predict import load_pycaret_model
-
-        pipeline = load_pycaret_model(str(output_dir), task_type)
+        pipeline = load_lightautoml_model(str(output_dir))
 
         logging.info(f"Feature info keys: {feature_info.keys()}")
         logging.info(f"Feature names: {feature_info.get('feature_names', [])}")
